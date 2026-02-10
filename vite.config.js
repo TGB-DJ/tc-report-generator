@@ -8,22 +8,26 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['logo.svg'],
       manifest: {
         name: 'College TC Generator',
         short_name: 'TC Gen',
         description: 'College Transfer Certificate Generator PWA',
-        theme_color: '#ffffff',
+        theme_color: '#4f46e5',
+        background_color: '#ffffff',
+        display: 'standalone',
         icons: [
           {
-            src: 'icon.svg',
+            src: '/logo.svg',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/svg+xml',
+            purpose: 'any'
           },
           {
-            src: 'icon.svg',
+            src: '/logo.svg',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
           }
         ]
       }
