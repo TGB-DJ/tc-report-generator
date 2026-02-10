@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KSK College - Detailed Project Documentation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman:ital,wght@0,400;0,700;1,400&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+        :root {
+            --primary-color: #000;
+            --secondary-color: #333;
+            --accent-color: #f97316;
+            /* Orange */
+            --border-color: #ccc;
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            line-height: 1.6;
+            color: #000;
+            margin: 0;
+            padding: 40px;
+            background: #f0f0f0;
+        }
+
+        /* A4 Page Simulation */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 0 auto 30px auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            box-sizing: border-box;
+            page-break-after: always;
+        }
+
+        /* Typography */
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Times New Roman', serif;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 1em;
+            color: var(--primary-color);
+        }
+
+        h1 {
+            font-size: 24pt;
+            text-align: center;
+            margin-top: 2em;
+            margin-bottom: 1.5em;
+        }
+
+        h2 {
+            font-size: 18pt;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-top: 2em;
+        }
+
+        h3 {
+            font-size: 14pt;
+            margin-top: 1.5em;
+        }
+
+        p {
+            font-size: 12pt;
+            text-align: justify;
+            margin-bottom: 1em;
+        }
+
+        ul,
+        ol {
+            font-size: 12pt;
+            margin-bottom: 1em;
+            padding-left: 40px;
+        }
+
+        li {
+            margin-bottom: 0.5em;
+        }
+
+        /* Specific Page Application */
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100%;
+        }
+
+        .cover-title {
+            font-size: 28pt;
+            margin-bottom: 20px;
+        }
+
+        .cover-subtitle {
+            font-size: 16pt;
+            margin-bottom: 60px;
+            font-weight: normal;
+        }
+
+        .logo-placeholder {
+            width: 150px;
+            height: 150px;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 60px;
+            font-size: 10pt;
+            color: #ccc;
+        }
+
+        .submitted-by,
+        .guided-by {
+            margin-bottom: 40px;
+            font-size: 14pt;
+        }
+
+        .department-info {
+            margin-top: auto;
+            font-size: 14pt;
+            font-weight: bold;
+        }
+
+        /* Table of Contents */
+        .toc-entry {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted #ccc;
+            margin-bottom: 10px;
+            font-size: 12pt;
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+            margin-bottom: 1em;
+            page-break-inside: avoid;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5em;
+        }
+
+        th,
+        td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+            font-size: 11pt;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        /* Print Settings */
+        @media print {
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .page {
+                margin: 0;
+                box-shadow: none;
+                width: 100%;
+                height: auto;
+                padding: 20mm;
+                /* Standard print margin */
+            }
+
+            /* Force page breaks explicitly if needed, mostly .page handles it */
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ================= COVER PAGE ================= -->
+    <div class="page cover-page">
+        <h1 class="cover-title">STUDENT MANAGEMENT SYSTEM AND TRANSFER CERTIFICATE GENERATION</h1>
+        <h2 class="cover-subtitle">A PROJECT REPORT</h2>
+
+        <p style="font-size: 14pt;">Submitted to</p>
+        <h2 style="border: none; margin: 0;">KANCHI SHRI KRISHNA COLLEGE OF ARTS AND SCIENCE</h2>
+        <p style="font-size: 12pt;">(Affiliated to University of Madras)</p>
+        <p style="font-size: 12pt;">Kilambi, Kancheepuram - 631 551</p>
+
+        <div class="logo-placeholder">
+            [COLLEGE LOGO HERE]
+        </div>
+
+        <div class="submitted-by">
+            <p><strong>Submitted By:</strong></p>
+            <p>[YOUR NAME]</p>
+            <p>[YOUR REG. NO]</p>
+        </div>
+
+        <div class="guided-by">
+            <p><strong>Under the Guidance of:</strong></p>
+            <p>[FACULTY NAME]</p>
+            <p>[DESIGNATION]</p>
+        </div>
+
+        <div class="department-info">
+            <p>DEPARTMENT OF COMPUTER SCIENCE</p>
+            <p>APRIL 2026</p>
+        </div>
+    </div>
+
+    <!-- ================= CERTIFICATE ================= -->
+    <div class="page">
+        <h1 style="text-decoration: underline;">CERTIFICATE</h1>
+        <p style="margin-top: 50px;">
+            This is to certify that the project entitled <strong>"STUDENT MANAGEMENT SYSTEM AND TRANSFER CERTIFICATE
+                GENERATION"</strong> is a bonafide work done by <strong>[YOUR NAME]</strong> (Reg. No: [YOUR REG NO]) in
+            partial fulfillment of the requirements for the award of the Degree of <strong>BACHELOR OF COMPUTER
+                APPLICATIONS / B.Sc. COMPUTER SCIENCE</strong> during the academic year 2025-2026.
+        </p>
+
+        <br><br><br><br>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 50px;">
+            <div style="text-align: center;">
+                <p><strong>Guide</strong></p>
+            </div>
+            <div style="text-align: center;">
+                <p><strong>Head of the Department</strong></p>
+            </div>
+        </div>
+
+        <br><br><br><br>
+
+        <p>Submitted for the Practical Examination held on: ___________________</p>
+
+        <br><br>
+
+        <div style="display: flex; justify-content: space-between;">
+            <div style="text-align: center;">
+                <p><strong>Internal Examiner</strong></p>
+            </div>
+            <div style="text-align: center;">
+                <p><strong>External Examiner</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ACKNOWLEDGEMENT ================= -->
+    <div class="page">
+        <h1 style="text-decoration: underline;">ACKNOWLEDGEMENT</h1>
+        <p>
+            I would like to express my special thanks of gratitude to my principal <strong>[PRINCIPAL NAME]</strong> as
+            well as our HOD <strong>[HOD NAME]</strong> who gave me the golden opportunity to do this wonderful project
+            on the topic <em>"Student Management System"</em>, which also helped me in doing a lot of Research and I
+            came to know about so many new things.
+        </p>
+        <p>
+            I am really thankful to them. Secondly, I would also like to thank my parents and friends who helped me a
+            lot in finalizing this project within the limited time frame.
+        </p>
+        <p>
+            I wish to express my sincere thanks to my project guide <strong>[GUIDE NAME]</strong>, for their patience,
+            motivation, enthusiasm, and immense knowledge. Their guidance helped me in all the time of research and
+            writing of this thesis.
+        </p>
+
+        <br><br>
+        <p style="text-align: right;"><strong>[YOUR NAME]</strong></p>
+    </div>
+
+    <!-- ================= ABSTRACT ================= -->
+    <div class="page">
+        <h1 style="text-decoration: underline;">ABSTRACT</h1>
+        <p>
+            The educational sector requires efficient management systems to handle the vast amount of student data
+            generated annually. Traditional paper-based systems or disconnected digital records often lead to
+            redundancy, data inconsistency, and increased administrative workload. The <strong>"Student Management
+                System (SMS)"</strong> developed for <strong>Kanchi Shri Krishna College of Arts and Science</strong> is
+            a robust, web-based solution designed to address these challenges.
+        </p>
+        <p>
+            This project leverages modern web technologies, specifically the MERN stack (MongoDB/Firebase, Express,
+            React, Node) concept, to create a Progressive Web Application (PWA). The system features Role-Based Access
+            Control (RBAC), distinguishing between Super Admins, Department Heads (HODs), Teachers, and Students.
+        </p>
+        <p>
+            Key functionalities include comprehensive student profiling, academic performance tracking, fee payment
+            status monitoring, and the automated generation of Transfer Certificates (TC). The TC module is a standout
+            feature, automating the validation of student clearance (No Dues) and formatting the official document for
+            printing, thereby reducing manual errors and processing time.
+        </p>
+        <p>
+            Furthermore, the application is built with a mobile-first approach, ensuring accessibility across devices.
+            The integration of real-time databases ensures that data updates are strictly synchronized across all user
+            interfaces instantaneously. This system significantly enhances the operational efficiency of the college
+            administration and provides a transparent, user-friendly interface for students and faculty.
+        </p>
+    </div>
+
+    <!-- ================= TABLE OF CONTENTS ================= -->
+    <div class="page">
+        <h1>TABLE OF CONTENTS</h1>
+
+        <div class="toc-entry"><span>1. INTRODUCTION</span> <span>1</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;1.1 Introduction</span> <span>1</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;1.2 Objectives of the Project</span> <span>2</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;1.3 Scope of the Project</span> <span>3</span></div>
+
+        <div class="toc-entry"><span>2. SYSTEM ANALYSIS</span> <span>4</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;2.1 Existing System</span> <span>4</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;2.2 Disadvantages of Existing System</span> <span>5</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;2.3 Proposed System</span> <span>6</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;2.4 Advantages of Proposed System</span> <span>7</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;2.5 Feasibility Study</span> <span>8</span></div>
+
+        <div class="toc-entry"><span>3. SYSTEM REQUIREMENTS</span> <span>10</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;3.1 Hardware Requirements</span> <span>10</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;3.2 Software Requirements</span> <span>10</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;3.3 Technology Description</span> <span>11</span></div>
+
+        <div class="toc-entry"><span>4. SYSTEM DESIGN</span> <span>15</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;4.1 System Architecture</span> <span>15</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;4.2 Data Flow Diagrams (DFD)</span> <span>16</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;4.3 UML Diagrams (Use Case, Class, Activity)</span>
+            <span>18</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;4.4 Database Design</span> <span>22</span></div>
+
+        <div class="toc-entry"><span>5. MODULE DESCRIPTION</span> <span>25</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;5.1 Authentication Module</span> <span>25</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;5.2 Admin Module</span> <span>26</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;5.3 Teacher/HOD Module</span> <span>28</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;5.4 Student Module</span> <span>29</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;5.5 TC Generator Module</span> <span>30</span></div>
+
+        <div class="toc-entry"><span>6. IMPLEMENTATION & CODING</span> <span>32</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;6.1 Project Structure</span> <span>32</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;6.2 Core Components Implementation</span> <span>33</span></div>
+
+        <div class="toc-entry"><span>7. SOFTWARE TESTING</span> <span>45</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;7.1 Testing Methodologies</span> <span>45</span></div>
+        <div class="toc-entry"><span>&nbsp;&nbsp;&nbsp;7.2 Test Cases</span> <span>47</span></div>
+
+        <div class="toc-entry"><span>8. SCREENSHOTS & OUTPUT</span> <span>52</span></div>
+
+        <div class="toc-entry"><span>9. CONCLUSION & FUTURE ENHANCEMENT</span> <span>60</span></div>
+
+        <div class="toc-entry"><span>10. BIBLIOGRAPHY</span> <span>62</span></div>
+    </div>
+
+    <!-- ================= CHAPTER 1 ================= -->
+    <div class="page">
+        <h1>CHAPTER 1: INTRODUCTION</h1>
+        <h2>1.1 Introduction</h2>
+        <p>
+            In the rapidly evolving digital era, educational institutions are increasingly tasked with managing vast
+            amounts of student and administrative data. The manual handling of such data is not only labor-intensive but
+            also prone to errors. The <strong>Student Management System (SMS)</strong> is a comprehensive software
+            solution designed to streamline the administrative processes of <strong>Kanchi Shri Krishna College of Arts
+                and Science</strong>.
+        </p>
+        <p>
+            The primary goal of this system is to provide a unified platform for managing student lifecycle events—from
+            admission to graduation. This includes personal information management, fee collection tracking, attendance
+            monitoring, performace evaluation, and the issuance of critical documents like Transfer Certificates (TC).
+        </p>
+        <p>
+            By digitizing these processes, the college can ensure data integrity, improve accessibility for
+            stakeholders, and significantly reduce the time spent on routine administrative tasks. The system is built
+            as a web-based application, ensuring it is accessible from any device with an internet connection, fostering
+            better communication between the administration, faculty, and students.
+        </p>
+
+        <h2>1.2 Objectives of the Project</h2>
+        <p>The main objectives of the Student Management System project are:</p>
+        <ul>
+            <li>To design a user-friendly interface for easy adaptability by non-technical staff.</li>
+            <li>To store all student-related data in a centralized, secure cloud database to prevent data loss.</li>
+            <li>To automate the calculation of fee dues and generate alerts for pending payments.</li>
+            <li>To simplify the Transfer Certificate (TC) generation process by autofilling student details and ensuring
+                eligibility criteria (e.g., No Dues) are met.</li>
+            <li>To provide role-based access to ensure data privacy—Admins see all, Teachers see their classes, and
+                Students see only their personal data.</li>
+            <li>To reduce paper usage, contributing to an eco-friendly campus environment.</li>
+        </ul>
+
+        <h2>1.3 Scope of the Project</h2>
+        <p>The scope of this project is confined to the operational requirements of Kanchi Shri Krishna College:</p>
+        <ul>
+            <li><strong>Admin Panel:</strong> Master control for adding/removing users (Staff/Students), configuring
+                academic years, and viewing global reports.</li>
+            <li><strong>Staff Panel:</strong> Interfaces for Department Heads and Class Teachers to view student lists,
+                update biodata, and track academic progress.</li>
+            <li><strong>Student Panel:</strong> A portal for students to view their profile, check fee status, and
+                download eligible documents.</li>
+            <li><strong>TC Module:</strong> A dedicated feature for generating, validating, and printing Transfer
+                Certificates in the specific format required by the institution.</li>
+        </ul>
+    </div>
+
+    <!-- ================= CHAPTER 2 ================= -->
+    <div class="page">
+        <h1>CHAPTER 2: SYSTEM ANALYSIS</h1>
+        <h2>2.1 Existing System</h2>
+        <p>
+            Currently, the college follows a manual or semi-automated system for student management. Student details are
+            recorded in physical admission registers. Fees are collected via challans, and records are maintained in
+            separate ledgers by the accounts department. Academic records are kept by individual departments.
+        </p>
+        <p>
+            When a student applies for a Transfer Certificate, the process involves:
+        </p>
+        <ol>
+            <li>The student submits a request form.</li>
+            <li>The form travels physically to the Library, Lab, and Accounts department for "No Dues" clearance.</li>
+            <li>The administrative officer manually verifies the admission register for details like DOB, Religion, and
+                Community.</li>
+            <li>The TC is typed out or handwritten, signed by the Principal, and issued.</li>
+        </ol>
+
+        <h2>2.2 Disadvantages of Existing System</h2>
+        <ul>
+            <li><strong>Time-Consuming:</strong> Retrieval of old records takes a significant amount of time.</li>
+            <li><strong>Data Redundancy:</strong> The same information (Name, Father's Name) is written in multiple
+                registers, leading to inconsistency if one is updated and another is not.</li>
+            <li><strong>Lack of Security:</strong> Physical registers can be damaged, lost, or accessed by unauthorized
+                personnel.</li>
+            <li><strong>Error-Prone:</strong> Manual entry of data into TCs often leads to spelling mistakes in names or
+                incorrect dates, requiring re-issuance.</li>
+            <li><strong>Storage Space:</strong> Storing physical files for thousands of students requires significant
+                physical space.</li>
+        </ul>
+
+        <h2>2.3 Proposed System</h2>
+        <p>
+            The proposed Student Management System is a centralized, cloud-hosted web application. All data is stored in
+            a secure online database (Firebase Firestore).
+        </p>
+        <p>
+            In the new system:
+        </p>
+        <ul>
+            <li><strong>Single Entry:</strong> Student data is entered once during admission and is available to all
+                authorized departments instantly.</li>
+            <li><strong>Instant Retrieval:</strong> Searching for a student by Admission Number takes milliseconds.</li>
+            <li><strong>Automated Validation:</strong> The system automatically checks the "Fees Paid" flag in the
+                database before allowing TC generation.</li>
+            <li><strong>Print-Ready Documents:</strong> Certificates are generated as PDF-ready HTML views that match
+                the pre-printed stationery or plain paper requirements perfectly.</li>
+        </ul>
+
+        <h2>2.5 Feasibility Study</h2>
+        <p>The feasibility of the project is analyzed in three dimensions:</p>
+
+        <h3>2.5.1 Technical Feasibility</h3>
+        <p>
+            The project uses <strong>React.js</strong> for the frontend and <strong>Firebase</strong> for the backend.
+            These are widely used, robust technologies with extensive documentation. The development team possesses the
+            necessary skills in JavaScript and Web Development. The hardware requirements are minimal (standard PCs),
+            making it technically feasible.
+        </p>
+
+        <h3>2.5.2 Economic Feasibility</h3>
+        <p>
+            The cost of developing and deploying this system is low. It eliminates the recurring cost of paper registers
+            and reduces the manpower required for record maintenance. Cloud hosting (initially free tier) removes the
+            need for expensive on-premise servers. Thus, it is economically viable.
+        </p>
+
+        <h3>2.5.3 Operational Feasibility</h3>
+        <p>
+            The system works on the same principles as the manual process but digitizes it. The user interface is
+            designed to be intuitive, resembling standard forms used by the staff. Minimal training is required for
+            current employees to switch to this system, ensuring high operational feasibility.
+        </p>
+    </div>
+
+    <!-- ================= CHAPTER 3 ================= -->
+    <div class="page">
+        <h1>CHAPTER 3: SYSTEM REQUIREMENTS</h1>
+
+        <h2>3.1 Hardware Requirements</h2>
+        <p>To run the application effectively, the following hardware configuration is recommended for the client
+            machines:</p>
+        <ul>
+            <li><strong>Processor:</strong> Intel Core i3 or higher / AMD Ryzen 3 equivalent.</li>
+            <li><strong>RAM:</strong> 4 GB or higher.</li>
+            <li><strong>Hard Disk:</strong> 128 GB SSD (Application is web-based, so local storage usage is minimal).
+            </li>
+            <li><strong>Monitor:</strong> 15-inch LED/LCD Color Monitor.</li>
+            <li><strong>Input Devices:</strong> Standard Keyboard and Mouse.</li>
+            <li><strong>Network:</strong> Broadband Internet Connection (Min 2 Mbps).</li>
+        </ul>
+
+        <h2>3.2 Software Requirements</h2>
+        <ul>
+            <li><strong>Operating System:</strong> Windows 10/11, macOS, Linux, or Android/iOS for mobile access.</li>
+            <li><strong>Front End:</strong> React.js, HTML5, CSS3 (Tailwind CSS).</li>
+            <li><strong>Back End / Database:</strong> Google Firebase (Authentication, Firestore, Storage).</li>
+            <li><strong>Web Browser:</strong> Google Chrome (Recommended), Mozilla Firefox, Microsoft Edge.</li>
+            <li><strong>Development Tools:</strong> Visual Studio Code (VS Code), Git for version control.</li>
+            <li><strong>Runtime Environment:</strong> Node.js (for development server).</li>
+        </ul>
+
+        <h2>3.3 Technology Description</h2>
+
+        <h3>React.js</h3>
+        <p>
+            React is a free and open-source front-end JavaScript library for building user interfaces based on UI
+            components. It is maintained by Meta (formerly Facebook). React allows us to create a Single Page
+            Application (SPA), which provides a smooth, app-like user experience without reloading the page for every
+            action.
+        </p>
+
+        <h3>Firebase</h3>
+        <p>
+            Firebase is a platform developed by Google for creating mobile and web applications. We use:
+        </p>
+        <ul>
+            <li><strong>Firebase Authentication:</strong> For secure user sign-in and session management.</li>
+            <li><strong>Cloud Firestore:</strong> A flexible, scalable NoSQL cloud database to store and sync data for
+                client- and server-side development.</li>
+        </ul>
+
+        <h3>Tailwind CSS</h3>
+        <p>
+            Tailwind CSS is a utility-first CSS framework for rapidly building custom user interfaces. It allows for
+            highly responsive designs directly in the markup, speeding up the styling process.
+        </p>
+    </div>
+
+    <!-- ================= CHAPTER 4 ================= -->
+    <div class="page">
+        <h1>CHAPTER 4: SYSTEM DESIGN</h1>
+
+        <h2>4.1 System Architecture</h2>
+        <p>
+            The system follows a <strong>Client-Server Architecture</strong> effectively, although using a Serverless
+            model via Firebase.
+        </p>
+        <p>
+            <strong>The Presentation Layer:</strong> The React application running in the user's browser. It handles all
+            user inputs and displays data.<br>
+            <strong>The Logic Layer:</strong> JavaScript code running on the client (and Cloud Functions if extended)
+            that validates data and processes requests.<br>
+            <strong>The Data Layer:</strong> Firebase Firestore Cloud Database.
+        </p>
+
+        <h2>4.4 Database Design</h2>
+        <p>
+            Since we are using a NoSQL database (Firestore), data is stored in "Collections" and "Documents" rather than
+            Tables and Rows.
+        </p>
+
+        <h3>Collection: Users</h3>
+        <table>
+            <tr>
+                <th>Field Name</th>
+                <th>Data Type</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>uid</td>
+                <td>String</td>
+                <td>Unique User ID from Auth</td>
+            </tr>
+            <tr>
+                <td>email</td>
+                <td>String</td>
+                <td>User Email</td>
+            </tr>
+            <tr>
+                <td>role</td>
+                <td>String</td>
+                <td>'admin', 'teacher', 'student'</td>
+            </tr>
+            <tr>
+                <td>department</td>
+                <td>String</td>
+                <td>Assigned Department</td>
+            </tr>
+        </table>
+
+        <h3>Collection: Students</h3>
+        <table>
+            <tr>
+                <th>Field Name</th>
+                <th>Data Type</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>admissionNo</td>
+                <td>String</td>
+                <td>Unique ID (Primary Key)</td>
+            </tr>
+            <tr>
+                <td>name</td>
+                <td>String</td>
+                <td>Student Name</td>
+            </tr>
+            <tr>
+                <td>fatherName</td>
+                <td>String</td>
+                <td>Father's/Guardian's Name</td>
+            </tr>
+            <tr>
+                <td>dob</td>
+                <td>Date</td>
+                <td>Date of Birth</td>
+            </tr>
+            <tr>
+                <td>community</td>
+                <td>String</td>
+                <td>Community (BC/MBC/SC/ST)</td>
+            </tr>
+            <tr>
+                <td>feesPaid</td>
+                <td>Boolean</td>
+                <td>True if 'No Dues'</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ================= CHAPTER 5 ================= -->
+    <div class="page">
+        <h1>CHAPTER 5: MODULE DESCRIPTION</h1>
+
+        <h2>5.1 Authentication Module</h2>
+        <p>
+            This module manages system security. It provides a login interface where users enter credentials. The system
+            verifies these against the Firebase Authentication database. Upon success, the system retrieves the user's
+            role and redirects them:
+            Admins -> /admin/dashboard
+            Students -> /student/dashboard
+            Teachers -> /teacher/dashboard.
+        </p>
+
+        <h2>5.5 TC Generator Module</h2>
+        <p>
+            The Transfer Certificate module is the core feature for document generation.
+        </p>
+        <h3>Process Flow:</h3>
+        <ol>
+            <li>Admin/Student searches for the student record by ID.</li>
+            <li>The system populates a TC Form with existing data (Name, DOB, Class).</li>
+            <li>The user inputs "Leaving Date" and "Reason for Leaving".</li>
+            <li>The system validates that `fees.balance` is Zero.</li>
+            <li>If valid, a "Print Preview" is shown.</li>
+            <li>The print view applies a special CSS `@media print` stylesheet that hides the navigation bar, buttons,
+                and background colors, leaving only the black-and-white certificate border and text properly aligned for
+                A4 paper.</li>
+        </ol>
+    </div>
+
+    <!-- ================= CHAPTER 6 ================= -->
+    <div class="page">
+        <h1>CHAPTER 6: IMPLEMENTATION DETAILS</h1>
+
+        <h2>6.1 Code Structure</h2>
+        <pre>
+/src
+  /components
+    Layout.jsx       # Main layout with Sidebar
+    Header.jsx       # Top navigation
+    /ui              # Reusable UI (Buttons, Cards)
+  /pages
+    Login.jsx        # Authentication Page
+    /admin           # Admin Dashboard Routes
+    /student         # Student Dashboard Routes
+      TCGenerator.jsx # Critical TC Logic
+  /context
+    AuthContext.jsx  # Global User State
+  firebase.js        # Connection Config
+  index.css          # Tailwind & Print Styles
+        </pre>
+
+        <h2>6.2 Key Code Snippet: Print Logic</h2>
+        <p>The following code demonstrates how the print functionality works in React:</p>
+        <pre>
+const handlePrint = () => {
+    window.print();
+};
+
+/* CSS in index.css */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #tc-print-container, #tc-print-container * {
+    visibility: visible;
+  }
+  #tc-print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    height: 297mm;
+  }
+}
+        </pre>
+    </div>
+
+    <!-- ================= CHAPTER 7 ================= -->
+    <div class="page">
+        <h1>CHAPTER 7: SOFTWARE TESTING</h1>
+
+        <h2>7.1 Testing User Acceptance (UAT)</h2>
+        <p>
+            The software underwent rigorous user acceptance testing.
+        </p>
+
+        <h3>Test Case 1: Login functionality</h3>
+        <table>
+            <tr>
+                <th>Step</th>
+                <th>Input</th>
+                <th>Expected Output</th>
+                <th>Result</th>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>Enter valid Admin email/pass</td>
+                <td>Redirect to Admin Dash</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Enter valid Student email/pass</td>
+                <td>Redirect to Student Dash</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Enter invalid credential</td>
+                <td>Show "Login Failed" toast</td>
+                <td>PASS</td>
+            </tr>
+        </table>
+
+        <h3>Test Case 2: TC Generation</h3>
+        <table>
+            <tr>
+                <th>Step</th>
+                <th>Input</th>
+                <th>Expected Output</th>
+                <th>Result</th>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>Select Student with Dues</td>
+                <td>"Cannot Print TC" Error</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Select Student (No Dues)</td>
+                <td>Show Print Button</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Click Print</td>
+                <td>Open System Print Dialog</td>
+                <td>PASS</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ================= CONCLUSION ================= -->
+    <div class="page">
+        <h1>CHAPTER 9: CONCLUSION</h1>
+        <p>
+            The <strong>Student Management System</strong> implemented for Kanchi Shri Krishna College successfully
+            meets all the initial requirements. It provides a secure, reliable, and efficient way to handle student
+            data. The automation of Transfer Certificate generation has reduced the processing time from days to
+            minutes.
+        </p>
+        <p>
+            By adopting a modern PWA architecture, the college is future-proofed, allowing for easy expansion into
+            mobile apps or integrating additional features like online fee payments in the future. The project stands as
+            a successful example of digital transformation in education.
+        </p>
+    </div>
+
+</body>
+
+</html>

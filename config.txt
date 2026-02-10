@@ -1,0 +1,12 @@
+- Downloading configuration data of your Firebase WEB app
+✔ Downloading configuration data of your Firebase WEB app
+{
+  "projectId": "ksk-college-cj",
+  "appId": "1:95984629669:web:d46d8dd4e2731c06bcda4c",
+  "storageBucket": "ksk-college-cj.firebasestorage.app",
+  "apiKey": "AIzaSyAWcWQFeVjg99WyZYpVlZjpbAU5qBu60-w",
+  "authDomain": "ksk-college-cj.firebaseapp.com",
+  "messagingSenderId": "95984629669",
+  "projectNumber": "95984629669",
+  "version": "2"
+}

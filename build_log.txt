@@ -1,0 +1,44 @@
+
+> tc-report@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 22 modules transformed.
+[31m✗[39m Build failed in 1.83s
+[31merror during build:
+[31m[vite-plugin-pwa:build] [plugin vite-plugin-pwa:build] src/context/AuthContext.jsx (6:4): There was an error during the build:
+  Transform failed with 2 errors:
+D:/tc report/src/context/AuthContext.jsx:6:4: ERROR: The symbol "signInWithEmailAndPassword" has already been declared
+D:/tc report/src/context/AuthContext.jsx:7:4: ERROR: The symbol "signOut" has already been declared
+Additionally, handling the error in the 'buildEnd' hook caused the following error:
+  Transform failed with 2 errors:
+D:/tc report/src/context/AuthContext.jsx:6:4: ERROR: The symbol "signInWithEmailAndPassword" has already been declared
+D:/tc report/src/context/AuthContext.jsx:7:4: ERROR: The symbol "signOut" has already been declared[31m
+file: [36mD:/tc report/src/context/AuthContext.jsx:6:4[31m
+[33m
+[33mThe symbol "signInWithEmailAndPassword" has already been declared[33m
+4  |      signInWithEmailAndPassword,
+5  |      signOut,
+6  |      signInWithEmailAndPassword,
+   |      ^
+7  |      signOut,
+8  |      onAuthStateChanged,
+
+[33mThe symbol "signOut" has already been declared[33m
+5  |      signOut,
+6  |      signInWithEmailAndPassword,
+7  |      signOut,
+   |      ^
+8  |      onAuthStateChanged,
+9  |      GoogleAuthProvider,
+[31m
+    at getRollupError (file:///D:/tc%20report/node_modules/rollup/dist/es/shared/parseAst.js:402:41)
+    at file:///D:/tc%20report/node_modules/rollup/dist/es/shared/node-entry.js:23444:39
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async catchUnfinishedHookActions (file:///D:/tc%20report/node_modules/rollup/dist/es/shared/node-entry.js:22902:16)
+    at async rollupInternal (file:///D:/tc%20report/node_modules/rollup/dist/es/shared/node-entry.js:23427:5)
+    at async buildEnvironment (file:///D:/tc%20report/node_modules/vite/dist/node/chunks/config.js:33541:12)
+    at async Object.build (file:///D:/tc%20report/node_modules/vite/dist/node/chunks/config.js:33900:19)
+    at async Object.buildApp (file:///D:/tc%20report/node_modules/vite/dist/node/chunks/config.js:33897:153)
+    at async CAC.<anonymous> (file:///D:/tc%20report/node_modules/vite/dist/node/cli.js:629:3)[39m

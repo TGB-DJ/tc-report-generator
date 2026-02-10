@@ -1,0 +1,17 @@
+- Preparing the list of your Firebase apps
+✔ Preparing the list of your Firebase apps
+{
+  "status": "success",
+  "result": [
+    {
+      "name": "projects/ksk-college-cj/webApps/1:95984629669:web:d46d8dd4e2731c06bcda4c",
+      "displayName": "KSK College PWA",
+      "platform": "WEB",
+      "appId": "1:95984629669:web:d46d8dd4e2731c06bcda4c",
+      "namespace": "Mzk0ZDk1MjctNWIyZi00NTg4LWE3MjAtMmQ3NTFjZmVlODg1",
+      "apiKeyId": "d2d5c07d-f62b-45fe-aafc-be831d246bd0",
+      "state": "ACTIVE",
+      "expireTime": "1970-01-01T00:00:00Z"
+    }
+  ]
+}

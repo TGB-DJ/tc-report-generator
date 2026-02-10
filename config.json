@@ -1,0 +1,4 @@
+{
+  "status": "error",
+  "error": "Unexpected platform. Only iOS, Android, and Web apps are supported"
+}
