@@ -13,9 +13,6 @@ const ProtectedRoute = ({ allowedRoles }) => {
     // specific check: if user is logged in but userData is still null, 
     // we might need to wait or it means the profile doesn't exist. 
     // If we simply return Outlet, the Dashboard might crash accessing userData variables.
-    // specific check: if user is logged in but userData is still null, 
-    // we might need to wait or it means the profile doesn't exist. 
-    // If we simply return Outlet, the Dashboard might crash accessing userData variables.
     if (user && !userData) {
         return (
             <div className="flex h-screen flex-col items-center justify-center gap-4 bg-slate-50">

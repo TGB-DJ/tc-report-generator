@@ -14,7 +14,7 @@ const ManageAdmins = () => {
     const [editingAdmin, setEditingAdmin] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [visiblePasswords, setVisiblePasswords] = useState({}); // Map of ID -> true/false
-    const { createUser, user } = useAuth();
+    const { createUser, user, userData } = useAuth();
 
     // Form State
     const [formData, setFormData] = useState({
@@ -26,15 +26,16 @@ const ManageAdmins = () => {
     const [formLoading, setFormLoading] = useState(false);
     const [formError, setFormError] = useState('');
 
-    const isSuperAdmin = user?.isSuperAdmin || user?.email === 'chirenjeevi7616@gmail.com';
+    const isSuperAdmin = userData?.isSuperAdmin || user?.email === 'chirenjeevi7616@gmail.com';
 
     useEffect(() => {
         if (isSuperAdmin) {
             fetchAdmins();
             // Silent Auto-Upgrade if missing flag
-            if (!user?.isSuperAdmin && user?.uid) {
+            if (!userData?.isSuperAdmin && user?.uid) {
                 const upgrade = async () => {
                     try {
+                        console.log("Auto-upgrading to Super Admin...");
                         await setDoc(doc(db, "users", user.uid), { isSuperAdmin: true }, { merge: true });
                         await setDoc(doc(db, "admins", user.uid), { isSuperAdmin: true }, { merge: true });
                     } catch (e) { console.error("Auto-upgrade failed", e); }
@@ -44,7 +45,7 @@ const ManageAdmins = () => {
         } else {
             setLoading(false);
         }
-    }, [user, isSuperAdmin]);
+    }, [user, userData, isSuperAdmin]);
 
     const fetchAdmins = async () => {
         try {
