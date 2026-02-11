@@ -52,25 +52,20 @@ body {
     visibility: visible;
   }
 
-  /* Position TC Container to fill the page exactly */
+  /* Position TC Container for bulk printing */
   #tc-print-container {
-    position: fixed;
+    position: absolute;
+    /* Changed from fixed to absolute to allow scrolling/paging */
     left: 0;
     top: 0;
-    width: 210mm;
-    height: 290mm;
-    /* Reduced from 297mm to be safe from bottom edge hardware margins */
-    padding: 15mm;
-    /* Uniform 4-side margin for print */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-sizing: border-box;
+    width: 100%;
+    /* No fixed height */
+    padding: 0;
+    margin: 0;
+    display: block;
+    /* Changed from flex to block */
     background: white;
     z-index: 9999;
-    transform: scale(1.0);
-    /* Scale down slightly to ensure it fits on one page */
-    transform-origin: center;
   }
 
   /* Ensure the border div inside fits comfortably */
@@ -85,5 +80,21 @@ body {
   /* Hide custom print-hidden elements explicitly */
   .no-print {
     display: none !important;
+  }
+
+  /* Page breaks for bulk TC printing */
+  .tc-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .tc-page-break:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .tc-page {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }

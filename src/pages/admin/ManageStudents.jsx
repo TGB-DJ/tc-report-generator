@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
@@ -8,10 +8,10 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/Select';
 import FeePaymentInput from '../../components/FeePaymentInput';
 import Toast from '../../components/ui/Toast';
-import YearBadge from '../../components/YearBadge';
-import { Trash2, Plus, Filter, X, Pencil } from 'lucide-react';
+import { Trash2, Plus, Filter, X, Pencil, Printer } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DEPARTMENT_CATEGORIES, getYearOptions } from '../../constants/departments';
+import BulkTCPrintModal from '../../components/BulkTCPrintModal';
 
 const ManageStudents = () => {
     // Data State
@@ -19,7 +19,7 @@ const ManageStudents = () => {
     const [filteredStudents, setFilteredStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [formLoading, setFormLoading] = useState(false);
-    const { createUser } = useAuth();
+    const { createUser } = useAuth(); // Assuming createUser is exposed in AuthContext for admin actions
 
     // Filters State
     const [filters, setFilters] = useState({
@@ -32,22 +32,20 @@ const ManageStudents = () => {
     const [formError, setFormError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
-    // Unique Values for Filters
-    const [uniqueValues, setUniqueValues] = useState({
-        depts: [],
-        classes: [],
-        years: []
-    });
+    // Bulk Print State
+    const [selectedStudents, setSelectedStudents] = useState([]);
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [printStudentIds, setPrintStudentIds] = useState([]);
 
     // Edit Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
-    const [editFormData, setEditFormData] = useState({
-        email: '',
-        phone: '',
-        password: ''
-    });
+
+    // Bulk Actions State
+    const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+    const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
+    const [bulkAmount, setBulkAmount] = useState({ tuition: '', bus: '' });
+    const [promoteConfirm, setPromoteConfirm] = useState('');
 
     // Form State
     const [formData, setFormData] = useState({
@@ -61,11 +59,19 @@ const ManageStudents = () => {
         nmId: '', // Naan Mudhalvan ID
         dept: '',
         class: '',
+        semester: '', // NEW
         // TC Required Fields
         fatherName: '',
         nationality: 'INDIAN',
         religion: '',
+        nationality: 'INDIAN',
+        religion: '',
         community: '',
+        gender: '',      // NEW
+        admissionNo: '', // NEW
+        aadharNo: '',    // NEW
+        panNo: '',       // NEW
+        otherInfo: '',   // NEW
         dob: '',
         admissionDate: '',
         academicYear: '2025-2026',
@@ -88,17 +94,11 @@ const ManageStudents = () => {
 
     const fetchStudents = async () => {
         try {
+            setLoading(true);
             const querySnapshot = await getDocs(collection(db, "students"));
             const studentsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setStudents(studentsList);
             setFilteredStudents(studentsList);
-
-            // Extract unique values for filters
-            const depts = [...new Set(studentsList.map(s => s.dept).filter(Boolean))];
-            const classes = [...new Set(studentsList.map(s => s.class).filter(Boolean))];
-            const years = [...new Set(studentsList.map(s => s.academicYear).filter(Boolean))];
-
-            setUniqueValues({ depts, classes, years });
         } catch (error) {
             console.error("Error fetching students:", error);
         } finally {
@@ -108,7 +108,7 @@ const ManageStudents = () => {
 
     // Filter Logic
     useEffect(() => {
-        let result = students;
+        let result = [...students];
 
         if (filters.dept) {
             result = result.filter(s => s.dept === filters.dept);
@@ -123,17 +123,63 @@ const ManageStudents = () => {
         setFilteredStudents(result);
     }, [filters, students]);
 
-    const handleFilterChange = (key, value) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
-    };
 
-    const clearFilters = () => {
-        setFilters({ dept: '', class: '', academicYear: '' });
-    };
-
+    // Handlers
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const resetForm = () => {
+        setFormData({
+            firstName: '', lastName: '', name: '', email: '', phone: '', password: '', regno: '', nmId: '', dept: '', class: '', semester: '',
+            fatherName: '', nationality: 'INDIAN', religion: '', community: '', gender: '', admissionNo: '', aadharNo: '', panNo: '', otherInfo: '',
+            dob: '', admissionDate: '',
+            academicYear: '2025-2026', promotion: 'REFER MARK LIST', conduct: 'GOOD', leavingDate: '',
+            feePayments: [], busPayments: [], otherPayments: [], feesTotal: '', feesBusTotal: '', feesPaid: '', feesBus: ''
+        });
+        setEditingStudent(null);
+        setFormError('');
+    };
+
+    const handleEdit = (student) => {
+        setEditingStudent(student);
+        setFormData({
+            ...student,
+            password: student.password || '', // Pre-fill password if available
+            semester: student.semester || '', // NEW
+            firstName: student.firstName || '',
+            lastName: student.lastName || '',
+            gender: student.gender || '',
+            admissionNo: student.admissionNo || '',
+            aadharNo: student.aadharNo || '',
+            panNo: student.panNo || '',
+            otherInfo: student.otherInfo || '',
+            feesTotal: student.fees?.total || '',
+            feesPaid: student.fees?.paid || '',
+            feesBusTotal: student.fees?.busTotal || '',
+            feesBus: student.fees?.busPaid || '',
+            feePayments: student.fees?.payments || [],
+            busPayments: student.fees?.busPayments || [],
+            otherPayments: student.fees?.otherPayments || []
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id, name) => {
+        if (!window.confirm(`Are you sure you want to delete ${name}? This cannot be undone.`)) return;
+        try {
+            await deleteDoc(doc(db, "students", id));
+            // Attempt to delete user auth linkage if possible, or just the doc
+            await deleteDoc(doc(db, "users", id));
+
+            setStudents(prev => prev.filter(s => s.id !== id));
+            setSuccessMessage(`Deleted ${name} successfully.`);
+            setTimeout(() => setSuccessMessage(''), 3000);
+        } catch (error) {
+            console.error("Error deleting student:", error);
+            alert("Failed to delete student.");
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -142,206 +188,222 @@ const ManageStudents = () => {
         setFormError('');
 
         try {
-            // Common Data Preparation
-            // 1. Tuition
-            const paidTuition = formData.feePayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-            const totalTuition = Number(formData.feesTotal) || paidTuition;
-            const balanceTuition = totalTuition - paidTuition;
-
-            // 2. Bus
-            const paidBus = formData.busPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-            const totalBus = Number(formData.feesBusTotal) || paidBus;
-            const balanceBus = totalBus - paidBus;
-
-            // 3. Other
-            const paidOther = formData.otherPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-            // "Total" for other is just what's paid since it's ad-hoc usually, or we can assume paid = total for now unless field added
-            const totalOther = paidOther;
-            const balanceOther = 0;
-
-            // Grand Totals
-            const grandTotal = totalTuition + totalBus + totalOther;
-            const grandPaid = paidTuition + paidBus + paidOther;
-            const grandBalance = balanceTuition + balanceBus + balanceOther;
-
-
-
-            // Combine Name
-            const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+            // Calculate Fees
+            const tuitionPaid = formData.feePayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            const busPaid = formData.busPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            const otherPaid = formData.otherPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
             const studentData = {
-                name: fullName,
-                firstName: formData.firstName, // Save separately too for future proofing
-                lastName: formData.lastName,   // Save separately too for future proofing
-                phone: formData.phone,
-                phone: formData.phone,
-                regno: formData.regno,
-                nmId: formData.nmId,
-                dept: formData.dept,
-                class: formData.class,
-                fatherName: formData.fatherName,
-                nationality: formData.nationality,
-                religion: formData.religion,
-                community: formData.community,
-                dob: formData.dob,
-                admissionDate: formData.admissionDate,
-                academicYear: formData.academicYear,
-                promotion: formData.promotion,
-                conduct: formData.conduct,
-                leavingDate: formData.leavingDate || null,
-                status: 'active',
-
-                // Detailed Payments
-                feePayments: formData.feePayments,   // Tuition history
-                busPayments: formData.busPayments,   // Bus history
-                otherPayments: formData.otherPayments, // Other history
-
+                ...formData,
+                name: `${formData.firstName} ${formData.lastName}`.trim() || formData.name,
                 fees: {
-                    // Tuition
-                    totalTuition,
-                    paidTuition,
-                    balanceTuition,
-
-                    // Bus
-                    totalBus,
-                    paidBus,
-                    balanceBus,
-
-                    // Other
-                    paidOther,
-
-                    // Grand Totals (for easy display)
-                    total: grandTotal,
-                    paid: grandPaid,
-                    balance: grandBalance
+                    total: Number(formData.feesTotal) || 0,
+                    paid: tuitionPaid,
+                    balance: (Number(formData.feesTotal) || 0) - tuitionPaid,
+                    busTotal: Number(formData.feesBusTotal) || 0,
+                    busPaid: busPaid,
+                    busBalance: (Number(formData.feesBusTotal) || 0) - busPaid,
+                    otherPaid: otherPaid,
+                    payments: formData.feePayments,
+                    busPayments: formData.busPayments,
+                    otherPayments: formData.otherPayments
                 }
             };
 
+            // Remove password from studentData stored in firestore 'students' collection if it's empty
+            if (!studentData.password) delete studentData.password;
+
+
             if (editingStudent) {
-                // UPDATE Logic
-                console.log('Updating student:', editingStudent.id);
+                // Update
+                const studentRef = doc(db, "students", editingStudent.id);
+                await updateDoc(studentRef, studentData);
 
-                // Only include password if provided
-                if (formData.password) {
-                    // Note: Updating password directly in Firestore user doc won't change Auth password
-                    // You'd need a cloud function or Admin SDK for that.
-                    // For now, we update the student record. 
-                    // To strictly update auth password, we need a separate flow or re-auth.
-                    // Assuming this app updates the 'users' collection which might be used for login lookup?
-                    // Actual Auth password change requires 'updatePassword' from firebase/auth which needs user login.
-                    // Admin changing another user's password usually requires Admin SDK.
-                    // We'll skip Auth password update here to avoid complexity unless requested.
-                }
-
-                await updateDoc(doc(db, "students", editingStudent.id), {
-                    ...studentData,
-                    email: formData.email, // Ensure email is synced
-                    password: formData.password // Update stored password
+                // Update User Mapping if email/phone changed
+                const userRef = doc(db, "users", editingStudent.id);
+                await updateDoc(userRef, {
+                    name: studentData.name,
+                    email: studentData.email,
+                    phone: studentData.phone,
+                    // Only update password in users collection if provided? 
+                    // Ideally auth update happens via cloud function or client SDK re-auth, but here we just update the doc.
                 });
 
-                // Update 'users' collection too if needed
-                await updateDoc(doc(db, "users", editingStudent.id), {
-                    email: formData.email,
-                    phone: formData.phone,
-                    name: fullName // Sync full name
-                });
-
-                setSuccessMessage(`Successfully updated student: ${fullName}`);
+                setSuccessMessage("Student updated successfully.");
             } else {
-                // CREATE Logic
-                console.log('Creating new student...');
+                // Create
                 await createUser(formData.email, formData.password, 'student', studentData);
-                setSuccessMessage(`Successfully added student: ${fullName}`);
+                setSuccessMessage("Student created successfully.");
             }
 
             setIsModalOpen(false);
             resetForm();
             fetchStudents();
+            setTimeout(() => setSuccessMessage(''), 3000);
+
         } catch (error) {
-            console.error('Error saving student:', error);
-            setFormError(error.message);
+            console.error("Error saving student:", error);
+            setFormError(error.message || "Failed to save student.");
         } finally {
             setFormLoading(false);
         }
     };
 
-    const resetForm = () => {
-        setEditingStudent(null);
-        setFormData({
-            firstName: '', lastName: '', name: '', email: '', phone: '', password: '', regno: '', nmId: '',
-            dept: '', class: '', fatherName: '', nationality: 'INDIAN',
-            religion: '', community: '', dob: '', admissionDate: '',
-            academicYear: '2025-2026', promotion: 'REFER MARK LIST', conduct: 'GOOD',
-            leavingDate: '',
-            feePayments: [], busPayments: [], otherPayments: [],
-            feesTotal: '', feesBusTotal: '', feesPaid: '', feesBus: ''
-        });
-    };
-
-    const handleDelete = async (id, studentName) => {
-        // Enhanced confirmation dialog
-        const confirmMessage = `⚠️ WARNING: Are you sure you want to delete student "${studentName}"?\n\nThis action CANNOT be undone!\n\nClick OK to permanently delete this student.`;
-
-        if (!window.confirm(confirmMessage)) return;
-
-        try {
-            await deleteDoc(doc(db, "students", id));
-            await deleteDoc(doc(db, "users", id)); // Also delete from users mapping
-            setStudents(prev => prev.filter(s => s.id !== id));
-            setFilteredStudents(prev => prev.filter(s => s.id !== id));
-
-            // Show success message
-            setSuccessMessage(`Successfully deleted student: ${studentName}`);
-            setTimeout(() => setSuccessMessage(''), 3000);
-        } catch (error) {
-            console.error("Error deleting student:", error);
-            alert("Error deleting student: " + error.message);
+    // Bulk Actions
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedStudents(filteredStudents.map(s => s.id));
+        } else {
+            setSelectedStudents([]);
         }
     };
 
-    const handleEdit = (student) => {
-        setEditingStudent(student);
-
-        // Split existing name if firstName/lastName missing
-        const parts = (student.name || '').split(' ');
-        const fName = student.firstName || parts[0] || '';
-        const lName = student.lastName || parts.slice(1).join(' ') || '';
-
-        setFormData({
-            firstName: fName,
-            lastName: lName,
-            name: student.name || '',
-            email: student.email || '',
-            phone: student.phone || '',
-            password: student.password || '', // Pre-fill if available
-            regno: student.regno || '',
-            nmId: student.nmId || '',
-            dept: student.dept || '',
-            class: student.class || '',
-            fatherName: student.fatherName || '',
-            nationality: student.nationality || 'INDIAN',
-            religion: student.religion || '',
-            community: student.community || '',
-            dob: student.dob || '',
-            admissionDate: student.admissionDate || '',
-            academicYear: student.academicYear || '',
-            promotion: student.promotion || '',
-            conduct: student.conduct || '',
-            leavingDate: student.leavingDate || '',
-            // Ensure feePayments is an array
-            feePayments: student.feePayments || [],
-            busPayments: student.busPayments || [],
-            otherPayments: student.otherPayments || [],
-
-            feesTotal: student.fees?.totalTuition || student.fees?.total || '',
-            feesBusTotal: student.fees?.totalBus || '',
-
-            feesPaid: student.fees?.paid || '', // Legacy
-            feesBus: student.fees?.bus || ''    // Legacy
+    const handleSelectStudent = (id) => {
+        setSelectedStudents(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(sid => sid !== id);
+            } else {
+                return [...prev, id];
+            }
         });
-        setIsModalOpen(true);
     };
 
+    const handleBulkPrint = () => {
+        if (selectedStudents.length === 0) {
+            alert("Please select at least one student to print TC.");
+            return;
+        }
+        setPrintStudentIds(selectedStudents);
+        setIsPrintModalOpen(true);
+    };
+
+    const handleSinglePrint = (id) => {
+        setPrintStudentIds([id]);
+        setIsPrintModalOpen(true);
+    };
+
+    // --- Bulk Operations ---
+
+    const handlePromoteBatch = async () => {
+        if (promoteConfirm !== 'CONFIRM') return;
+
+        setFormLoading(true);
+        try {
+            const batchStudents = filteredStudents; // Students in current filter (or all if no filter)
+            if (batchStudents.length === 0) throw new Error("No students to promote.");
+
+            const updates = batchStudents.map(student => {
+                let currentSem = Number(student.semester) || 0;
+                let currentClass = student.class;
+
+                // Logic: If no semester, infer from class (Assume start of year)
+                if (currentSem === 0) {
+                    if (currentClass === '1st Year') currentSem = 1;
+                    else if (currentClass === '2nd Year') currentSem = 3;
+                    else if (currentClass === '3rd Year') currentSem = 5;
+                }
+
+                // Promote to next semester
+                let newSem = currentSem + 1;
+                let newClass = currentClass;
+
+                // Define Class based on New Semester
+                if (newSem === 1 || newSem === 2) newClass = '1st Year';
+                else if (newSem === 3 || newSem === 4) newClass = '2nd Year';
+                else if (newSem === 5 || newSem === 6) newClass = '3rd Year';
+                else if (newSem > 6) newClass = 'Alumni';
+
+                return updateDoc(doc(db, "students", student.id), {
+                    class: newClass,
+                    semester: newSem.toString()
+                });
+            });
+
+            await Promise.all(updates);
+            setSuccessMessage(`Promoted ${updates.length} students successfully.`);
+            setIsPromoteModalOpen(false);
+            setPromoteConfirm('');
+            fetchStudents(); // Refresh
+        } catch (error) {
+            console.error("Promotion failed:", error);
+            alert("Promotion failed: " + error.message);
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    const handleBulkFeeUpdate = async () => {
+        if (!filters.dept || !filters.class) {
+            alert("Please select both Department and Class filters to update fees.");
+            return;
+        }
+
+        const tuitionAdd = Number(bulkAmount.tuition) || 0;
+        const busAdd = Number(bulkAmount.bus) || 0;
+
+        if (tuitionAdd === 0 && busAdd === 0) {
+            alert("Please enter an amount to add.");
+            return;
+        }
+
+        setFormLoading(true);
+        try {
+            const batchStudents = filteredStudents;
+            if (batchStudents.length === 0) throw new Error("No students found in this batch.");
+
+            const updates = batchStudents.map(student => {
+                const currentFees = student.fees || {};
+                const newTotal = (Number(currentFees.total) || 0) + tuitionAdd;
+                const newBalance = (Number(currentFees.balance) || 0) + tuitionAdd;
+
+                const newBusTotal = (Number(currentFees.busTotal) || 0) + busAdd;
+                // Only increase bus balance if they already use the bus? 
+                // Or assume everyone in the batch gets the hike?
+                // Safety: Only add bus fee if they have existing bus fee or logic implies it.
+                // For simplified "Semester Switch", we assume the admin knows who they filtered.
+                const newBusBalance = (Number(currentFees.busBalance) || 0) + busAdd;
+
+                const newBusBalance = (Number(currentFees.busBalance) || 0) + busAdd;
+
+                // Create Fee History Record
+                const newHistory = {
+                    date: new Date().toISOString(),
+                    semester: currentSem.toString() || 'Unknown',
+                    tuition: tuitionAdd,
+                    bus: busAdd,
+                    total: tuitionAdd + busAdd,
+                    desc: `Semester ${currentSem} Fee Update`
+                };
+
+                const currentHistory = currentFees.history || [];
+
+                return updateDoc(doc(db, "students", student.id), {
+                    fees: {
+                        ...currentFees,
+                        total: newTotal,
+                        balance: newBalance,
+                        busTotal: newBusTotal,
+                        busBalance: newBusBalance,
+                        history: [...currentHistory, newHistory] // Append new record
+                    }
+                });
+            });
+
+            await Promise.all(updates);
+            setSuccessMessage(`Updated fees for ${updates.length} students.`);
+            setIsFeeModalOpen(false);
+            setBulkAmount({ tuition: '', bus: '' });
+            fetchStudents();
+        } catch (error) {
+            console.error("Fee update failed:", error);
+            alert("Fee update failed: " + error.message);
+        } finally {
+            setFormLoading(false);
+        }
+    };
+
+    // Helper to check if all filtered students are selected
+    const isAllSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudents.includes(s.id));
 
 
     return (
@@ -357,59 +419,62 @@ const ManageStudents = () => {
 
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-slate-800">Manage Students</h2>
-                <Button onClick={() => setIsModalOpen(true)}>
-                    <Plus size={20} /> Add Student
-                </Button>
+                <div className="flex gap-2">
+                    {selectedStudents.length > 0 && (
+                        <Button onClick={handleBulkPrint} variant="secondary">
+                            <Printer size={20} className="mr-2" />
+                            Print TC ({selectedStudents.length})
+                        </Button>
+                    )}
+                    <Button onClick={() => { resetForm(); setIsModalOpen(true); }}>
+                        <Plus size={20} /> Add Student
+                    </Button>
+                </div>
             </div>
 
-            {/* Filters Section */}
-            <Card className="p-4 bg-white/50 backdrop-blur-sm">
-                <div className="flex flex-wrap items-end gap-4">
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="text-sm font-medium text-slate-600 mb-1 block">Department</label>
-                        <select
-                            className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange/20"
-                            value={filters.dept}
-                            onChange={(e) => handleFilterChange('dept', e.target.value)}
-                        >
-                            <option value="">All Departments</option>
-                            {uniqueValues.depts.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
-                    </div>
+            {/* Filter Section */}
+            <Card className="p-4">
+                <div className="flex items-center gap-2 mb-3 text-slate-600">
+                    <Filter size={18} />
+                    <span className="font-medium">Filters</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Select
+                        label="Department"
+                        value={filters.dept}
+                        onChange={(e) => setFilters(prev => ({ ...prev, dept: e.target.value }))}
+                        groupedOptions={DEPARTMENT_CATEGORIES}
+                    />
+                    <Select
+                        label="Class/Year"
+                        value={filters.class}
+                        onChange={(e) => setFilters(prev => ({ ...prev, class: e.target.value }))}
+                        options={['1st Year', '2nd Year', '3rd Year']} // Simplified for filter
+                    />
+                    {/* Add more filters if needed */}
+                </div>
 
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="text-sm font-medium text-slate-600 mb-1 block">Class</label>
-                        <select
-                            className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange/20"
-                            value={filters.class}
-                            onChange={(e) => handleFilterChange('class', e.target.value)}
-                        >
-                            <option value="">All Classes</option>
-                            {uniqueValues.classes.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                    </div>
-
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="text-sm font-medium text-slate-600 mb-1 block">Batch (Year)</label>
-                        <select
-                            className="w-full p-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-orange/20"
-                            value={filters.academicYear}
-                            onChange={(e) => handleFilterChange('academicYear', e.target.value)}
-                        >
-                            <option value="">All Batches</option>
-                            {uniqueValues.years.map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                    </div>
-
-                    {(filters.dept || filters.class || filters.academicYear) && (
-                        <button
-                            onClick={clearFilters}
-                            className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors mb-[2px]"
-                            title="Clear Filters"
-                        >
-                            <X size={20} />
-                        </button>
-                    )}
+                {/* Bulk Actions Toolbar (Visible only when filters active) */}
+                <div className="mt-4 flex gap-3 border-t border-slate-100 pt-3">
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            setIsPromoteModalOpen(true);
+                        }}
+                        disabled={filteredStudents.length === 0}
+                    >
+                        Switch to Next Sem
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => {
+                            if (!filters.dept || !filters.class) return alert("Select Department and Class.");
+                            setIsFeeModalOpen(true);
+                        }}
+                        disabled={!filters.dept || !filters.class || filteredStudents.length === 0}
+                    >
+                        Update Fees
+                    </Button>
                 </div>
             </Card>
 
@@ -418,6 +483,14 @@ const ManageStudents = () => {
                     <table className="w-full text-left">
                         <thead className="bg-slate-50 border-b border-slate-100">
                             <tr>
+                                <th className="p-4 w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={isAllSelected}
+                                        onChange={handleSelectAll}
+                                        className="rounded border-slate-300 text-brand-orange focus:ring-brand-orange"
+                                    />
+                                </th>
                                 <th className="p-4 font-semibold text-slate-600">Reg No</th>
                                 <th className="p-4 font-semibold text-slate-600">Name</th>
                                 <th className="p-4 font-semibold text-slate-600">Phone</th>
@@ -428,14 +501,22 @@ const ManageStudents = () => {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="6" className="p-8 text-center">Loading...</td></tr>
+                                <tr><td colSpan="7" className="p-8 text-center">Loading...</td></tr>
                             ) : students.length === 0 ? (
-                                <tr><td colSpan="6" className="p-8 text-center text-slate-500">No students found. Add one to get started.</td></tr>
+                                <tr><td colSpan="7" className="p-8 text-center text-slate-500">No students found. Add one to get started.</td></tr>
                             ) : filteredStudents.length === 0 ? (
-                                <tr><td colSpan="6" className="p-8 text-center text-slate-500">No students match the selected filters.</td></tr>
+                                <tr><td colSpan="7" className="p-8 text-center text-slate-500">No students match the selected filters.</td></tr>
                             ) : (
                                 filteredStudents.map((student) => (
                                     <tr key={student.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                        <td className="p-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedStudents.includes(student.id)}
+                                                onChange={() => handleSelectStudent(student.id)}
+                                                className="rounded border-slate-300 text-brand-orange focus:ring-brand-orange"
+                                            />
+                                        </td>
                                         <td className="p-4">{student.regno}</td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
@@ -448,9 +529,16 @@ const ManageStudents = () => {
                                         <td className="p-4 text-slate-500">{student.phone || "-"}</td>
                                         <td className="p-4">{student.dept}</td>
                                         <td className={`p-4 font-medium ${student.fees?.balance > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                                            ₹{student.fees?.balance}
+                                            ₹{student.fees?.balance || 0}
                                         </td>
                                         <td className="p-4 flex gap-2">
+                                            <button
+                                                onClick={() => handleSinglePrint(student.id)}
+                                                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                title={`Print TC for ${student.name}`}
+                                            >
+                                                <Printer size={18} />
+                                            </button>
                                             <button
                                                 onClick={() => handleEdit(student)}
                                                 className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -472,7 +560,7 @@ const ManageStudents = () => {
                         </tbody>
                     </table>
                 </div>
-            </Card >
+            </Card>
 
             <AnimatePresence>
                 {isModalOpen && (
@@ -499,13 +587,14 @@ const ManageStudents = () => {
                                     <Input name="lastName" label="Last Name" value={formData.lastName} onChange={handleInputChange} required autoComplete="off" />
                                     <Input name="fatherName" label="Father's Name / Guardian" value={formData.fatherName} onChange={handleInputChange} required autoComplete="off" />
                                     <Input name="regno" label="Register No" value={formData.regno} onChange={handleInputChange} required autoComplete="off" />
+                                    <Input name="admissionNo" label="Admission No" value={formData.admissionNo} onChange={handleInputChange} required autoComplete="off" />
                                     <Input name="nmId" label="NM ID (Naan Mudhalvan)" value={formData.nmId} onChange={handleInputChange} autoComplete="off" />
                                     <Input name="phone" label="Phone Number" value={formData.phone} onChange={handleInputChange} required autoComplete="off" />
                                     <Input name="email" label="Email" type="email" value={formData.email} onChange={handleInputChange} required autoComplete="off" />
                                     <Input
                                         name="password"
-                                        label={editingStudent ? "New Password (Optional)" : "Password"}
-                                        type="password"
+                                        label={editingStudent ? "Password (leave blank to keep current)" : "Password"}
+                                        type="text"
                                         value={formData.password}
                                         onChange={handleInputChange}
                                         required={!editingStudent}
@@ -513,8 +602,21 @@ const ManageStudents = () => {
                                         placeholder={editingStudent ? "Leave blank to keep current" : "Required"}
                                     />
                                     <Input name="nationality" label="Nationality" value={formData.nationality} onChange={handleInputChange} required autoComplete="off" />
+                                    <Select
+                                        name="gender"
+                                        label="Gender"
+                                        value={formData.gender}
+                                        onChange={handleInputChange}
+                                        options={['Male', 'Female', 'Other']}
+                                        required
+                                    />
                                     <Input name="religion" label="Religion" value={formData.religion} onChange={handleInputChange} required autoComplete="off" />
                                     <Input name="community" label="Community" value={formData.community} onChange={handleInputChange} autoComplete="off" />
+                                    <Input name="aadharNo" label="Aadhar No" value={formData.aadharNo} onChange={handleInputChange} autoComplete="off" />
+                                    <Input name="panNo" label="PAN No" value={formData.panNo} onChange={handleInputChange} autoComplete="off" />
+                                    <div className="md:col-span-2">
+                                        <Input name="otherInfo" label="Other Info" value={formData.otherInfo} onChange={handleInputChange} autoComplete="off" placeholder="Any other remarks..." />
+                                    </div>
                                     <Select
                                         name="dept"
                                         label="Department"
@@ -530,6 +632,13 @@ const ManageStudents = () => {
                                         onChange={handleInputChange}
                                         options={formData.dept ? getYearOptions(formData.dept) : ['1st Year', '2nd Year', '3rd Year']}
                                         required
+                                    />
+                                    <Select
+                                        name="semester"
+                                        label="Semester"
+                                        value={formData.semester}
+                                        onChange={handleInputChange}
+                                        options={['1', '2', '3', '4', '5', '6']}
                                     />
 
                                 </div>
@@ -608,6 +717,97 @@ const ManageStudents = () => {
                     </div>
                 )}
             </AnimatePresence >
+
+            {/* Print Modal */}
+            <AnimatePresence>
+                {isPrintModalOpen && (
+                    <BulkTCPrintModal
+                        studentIds={printStudentIds}
+                        onClose={() => setIsPrintModalOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Promote Modal */}
+            <AnimatePresence>
+                {isPromoteModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+                        >
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">Promote Students</h3>
+                            <p className="text-slate-600 mb-4">
+                                You are about to promote <b>{filteredStudents.length}</b> students
+                                {filters.class ? <span> from <span className="font-bold text-brand-orange">{filters.class}</span></span> : " across ALL classes"}
+                                to the next year.
+                            </p>
+                            <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg mb-4">
+                                ⚠️ This action cannot be easily undone. Please verify the filter before proceeding.
+                            </div>
+                            <Input
+                                label="Type 'CONFIRM' to proceed"
+                                value={promoteConfirm}
+                                onChange={(e) => setPromoteConfirm(e.target.value)}
+                                placeholder="CONFIRM"
+                            />
+                            <div className="flex justify-end gap-3 mt-6">
+                                <Button variant="ghost" onClick={() => setIsPromoteModalOpen(false)}>Cancel</Button>
+                                <Button
+                                    onClick={handlePromoteBatch}
+                                    isLoading={formLoading}
+                                    disabled={promoteConfirm !== 'CONFIRM'}
+                                >
+                                    Promote Students
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Fee Update Modal */}
+            <AnimatePresence>
+                {isFeeModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+                        >
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">Update Batch Fees</h3>
+                            <div className="mb-4 text-sm text-slate-600">
+                                Target: <b>{filters.dept} - {filters.class}</b> ({filteredStudents.length} Students)
+                            </div>
+                            <div className="space-y-4">
+                                <Input
+                                    label="Add to Tuition Fee (₹)"
+                                    type="number"
+                                    value={bulkAmount.tuition}
+                                    onChange={(e) => setBulkAmount(prev => ({ ...prev, tuition: e.target.value }))}
+                                    placeholder="e.g. 15000"
+                                />
+                                <Input
+                                    label="Add to Bus Fee (₹)"
+                                    type="number"
+                                    value={bulkAmount.bus}
+                                    onChange={(e) => setBulkAmount(prev => ({ ...prev, bus: e.target.value }))}
+                                    placeholder="Optional"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 mt-6">
+                                <Button variant="ghost" onClick={() => setIsFeeModalOpen(false)}>Cancel</Button>
+                                <Button onClick={handleBulkFeeUpdate} isLoading={formLoading}>
+                                    Update Fees
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
 
         </div >

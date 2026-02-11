@@ -23,6 +23,7 @@ const ManageTeachers = () => {
         email: '',
         phone: '',
         password: '',
+        gender: '', // NEW
         cid: '',
         dept: '',
         doj: '',
@@ -60,6 +61,7 @@ const ManageTeachers = () => {
             email: teacher.email || '',
             phone: teacher.phone || '',
             password: teacher.password || '', // Pre-fill if available
+            gender: teacher.gender || '', // NEW
             cid: teacher.cid || '',
             dept: teacher.dept || '',
             doj: teacher.doj || '',
@@ -77,6 +79,7 @@ const ManageTeachers = () => {
         try {
             const teacherData = {
                 name: formData.name,
+                gender: formData.gender, // NEW
                 phone: formData.phone,
                 cid: formData.cid,
                 dept: formData.dept,
@@ -109,7 +112,7 @@ const ManageTeachers = () => {
 
             setIsModalOpen(false);
             setFormData({
-                name: '', email: '', phone: '', password: '', cid: '', dept: '', doj: '', qualification: '', isHod: false
+                name: '', email: '', phone: '', password: '', gender: '', cid: '', dept: '', doj: '', qualification: '', isHod: false
             });
             setEditingTeacher(null);
             fetchTeachers();
@@ -171,7 +174,7 @@ const ManageTeachers = () => {
                     <Button onClick={() => {
                         setEditingTeacher(null);
                         setFormData({
-                            name: '', email: '', phone: '', password: '', cid: '', dept: '', doj: '', qualification: '', isHod: false
+                            name: '', email: '', phone: '', password: '', gender: '', cid: '', dept: '', doj: '', qualification: '', isHod: false
                         });
                         setIsModalOpen(true);
                     }}>
@@ -268,6 +271,14 @@ const ManageTeachers = () => {
                                     placeholder={editingTeacher ? "Leave blank to keep current" : "Required"}
                                 />
                                 <div className="grid grid-cols-2 gap-4">
+                                    <Select
+                                        name="gender"
+                                        label="Gender"
+                                        value={formData.gender}
+                                        onChange={handleInputChange}
+                                        options={['Male', 'Female', 'Other']}
+                                        required
+                                    />
                                     <Select
                                         name="dept"
                                         label="Department"

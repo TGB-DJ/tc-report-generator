@@ -20,7 +20,13 @@ const Login = () => {
 
     useEffect(() => {
         if (userData) {
-            if (userData.role === 'admin') navigate('/admin');
+            if (userData.role === 'admin') {
+                if (userData.isSuperAdmin || userData.email === 'chirenjeevi7616@gmail.com') {
+                    navigate('/admin/admins');
+                } else {
+                    navigate('/admin');
+                }
+            }
             else if (['teacher', 'hod'].includes(userData.role)) navigate('/teacher');
             else if (userData.role === 'student') navigate('/student');
         } else if (user && !authLoading && !userData) {
@@ -191,64 +197,6 @@ const Login = () => {
                         {/* Hint for demo/dev purposes */}
                         <div className="text-xs text-center text-slate-400 mt-6">
                             Powered by <span className="font-bold text-brand-orange">CJ Productions</span>
-                        </div>
-
-                        {/* Emergency Repair Tool */}
-                        <div className="mt-8 pt-4 border-t border-slate-100 text-center">
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    if (!window.confirm("This will attempt to fix missing Admin/Student accounts. Continue?")) return;
-                                    setLoading(true);
-                                    try {
-                                        // Dynamic import to allow repair actions
-                                        const { doc, setDoc, getDoc } = await import('firebase/firestore');
-                                        const { signInWithEmailAndPassword } = await import('firebase/auth');
-                                        const { auth, db } = await import('../lib/firebase');
-
-                                        const fixUser = async (email, password, role, collectionName, data) => {
-                                            try {
-                                                console.log(`Fixing ${email}...`);
-                                                const cred = await signInWithEmailAndPassword(auth, email, password);
-                                                const uid = cred.user.uid;
-
-                                                await setDoc(doc(db, "users", uid), {
-                                                    uid, email, role, phone: data.phone || "", createdAt: new Date().toISOString()
-                                                }, { merge: true });
-
-                                                await setDoc(doc(db, collectionName, uid), {
-                                                    uid, email, ...data, createdAt: new Date().toISOString()
-                                                }, { merge: true });
-                                                console.log(`Fixed ${email}`);
-                                            } catch (e) {
-                                                console.error(`Error fixing ${email}:`, e);
-                                            }
-                                        };
-
-                                        // Fix Admin
-                                        await fixUser("admin@ksk.edu.in", "admin123", "admin", "admins", { name: "Super Admin", phone: "9999999999" });
-                                        // Fix Specific Admin (Password based fallback)
-                                        await fixUser("chirenjeevi7616@gmail.com", "admin123", "admin", "admins", { name: "Chirenjeevi", phone: "9999999999" });
-
-                                        // Fix Student (User's specific account)
-                                        await fixUser("12256@ksk.edu.in", "122560", "student", "students", {
-                                            name: "Test Student", regno: "12256", dept: "B.Sc CS", class: "II Year",
-                                            academicYear: "2025-2026", conduct: "Good",
-                                            fees: { total: 30000, paid: 10000, balance: 20000 }
-                                        });
-
-                                        alert("Database Repair Attempted! Try logging in now.");
-                                        window.location.reload();
-                                    } catch (err) {
-                                        console.error(err);
-                                        alert("Repair failed: " + err.message);
-                                        setLoading(false);
-                                    }
-                                }}
-                                className="text-[10px] text-brand-orange hover:underline opacity-50 hover:opacity-100"
-                            >
-                                🔧 Repair Database (Dev Only)
-                            </button>
                         </div>
                     </form>
                 </Card>

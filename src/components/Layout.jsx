@@ -70,6 +70,10 @@ const Layout = () => {
                         <SidebarLink to="/admin" icon={Home} label="Dashboard" {...commonProps} />
                         <SidebarLink to="/admin/students" icon={GraduationCap} label="Students" {...commonProps} />
                         <SidebarLink to="/admin/teachers" icon={Users} label="Teachers" {...commonProps} />
+                        <SidebarLink to="/admin/events" icon={FileText} label="Events" {...commonProps} />
+                        {(userData?.isSuperAdmin || userData?.email === 'chirenjeevi7616@gmail.com') && (
+                            <SidebarLink to="/admin/admins" icon={Settings} label="Admins" {...commonProps} />
+                        )}
                     </>
                 );
             case 'teacher':
@@ -80,7 +84,7 @@ const Layout = () => {
                 return (
                     <>
                         <SidebarLink to="/student" icon={Home} label="Dashboard" {...commonProps} />
-                        <SidebarLink to="/student/tc" icon={FileText} label="Generate TC" {...commonProps} />
+                        <SidebarLink to="/student/tc" icon={FileText} label="TC Format" {...commonProps} />
                     </>
                 );
             default:

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
-import { Printer } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 const TCGenerator = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [student, setStudent] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -41,20 +43,18 @@ const TCGenerator = () => {
         if (user) fetchProfile();
     }, [user]);
 
-    const handlePrint = () => {
-        window.print();
-    };
+
 
     if (loading) return <div className="p-10 text-center">Loading...</div>;
     if (!student) return <div className="p-10 text-center">Student not found.</div>;
 
     return (
         <div className="max-w-4xl mx-auto p-4">
-            {/* Print Button - Hidden when printing */}
+            {/* Navigation Button */}
             <div className="mb-4 no-print">
-                <Button onClick={handlePrint}>
-                    <Printer size={16} className="mr-2" />
-                    Print Transfer Certificate
+                <Button variant="outline" onClick={() => navigate('/student')}>
+                    <ArrowLeft size={16} className="mr-2" />
+                    Back to Dashboard
                 </Button>
             </div>
 

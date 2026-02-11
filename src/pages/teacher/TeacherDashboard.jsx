@@ -8,8 +8,9 @@ import Button from '../../components/ui/Button'; // Added
 import Input from '../../components/ui/Input'; // Added
 import Toast from '../../components/ui/Toast'; // Added
 import Select from '../../components/Select';
-import { Users, Filter, Pencil, X } from 'lucide-react'; // Added Pencil, X
+import { Users, Filter, Pencil, X, Printer } from 'lucide-react'; // Added Pencil, X
 import { AnimatePresence, motion } from 'framer-motion'; // Added
+import BulkTCPrintModal from '../../components/BulkTCPrintModal';
 
 const TeacherDashboard = () => {
     const { user } = useAuth();
@@ -35,6 +36,11 @@ const TeacherDashboard = () => {
     });
     const [updateLoading, setUpdateLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+
+    // Bulk Print State
+    const [selectedStudents, setSelectedStudents] = useState([]);
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+    const [printStudentIds, setPrintStudentIds] = useState([]);
 
     const [errorMessage, setErrorMessage] = useState('');
 
@@ -136,6 +142,35 @@ const TeacherDashboard = () => {
         setIsEditModalOpen(true);
     };
 
+    // Bulk Selection Handlers
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedStudents(filteredStudents.map(s => s.id));
+        } else {
+            setSelectedStudents([]);
+        }
+    };
+
+    const handleSelectStudent = (id) => {
+        if (selectedStudents.includes(id)) {
+            setSelectedStudents(prev => prev.filter(sId => sId !== id));
+        } else {
+            setSelectedStudents(prev => [...prev, id]);
+        }
+    };
+
+    // Print Handlers
+    const handleBulkPrint = () => {
+        if (selectedStudents.length === 0) return;
+        setPrintStudentIds(selectedStudents);
+        setIsPrintModalOpen(true);
+    };
+
+    const handleSinglePrint = (id) => {
+        setPrintStudentIds([id]);
+        setIsPrintModalOpen(true);
+    };
+
     const handleUpdateStudent = async (e) => {
         e.preventDefault();
         setUpdateLoading(true);
@@ -175,10 +210,25 @@ const TeacherDashboard = () => {
         }
     };
 
+
+
+    // Helper to check if all filtered students are selected
+    const isAllSelected = filteredStudents.length > 0 && filteredStudents.every(s => selectedStudents.includes(s.id));
+
     if (loading) return <div className="p-10 text-center">Loading dashboard...</div>;
 
     return (
         <div className="space-y-6">
+            {/* Bulk Print Modal */}
+            <AnimatePresence>
+                {isPrintModalOpen && (
+                    <BulkTCPrintModal
+                        studentIds={printStudentIds}
+                        onClose={() => setIsPrintModalOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
+
             <div className="flex justify-between items-start">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-800">Teacher Dashboard</h1>
@@ -186,9 +236,39 @@ const TeacherDashboard = () => {
                         Welcome, {teacherProfile?.name} ({teacherProfile?.dept})
                     </p>
                 </div>
-                <Button variant="outline" onClick={() => setIsProfileModalOpen(true)} className="gap-2">
-                    <Users size={18} /> View Profile
-                </Button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setFeeStatus('unpaid')}
+                        className="relative p-2 mr-2 text-slate-600 hover:text-brand-orange transition-colors"
+                        title="View Students with Pending Fees"
+                    >
+                        <div className="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                            {allStudents.filter(s => {
+                                // Filter by dept first
+                                const isMyDept = teacherProfile?.dept ? s.dept?.includes(teacherProfile.dept.split('(')[0].trim()) : true;
+                                return isMyDept && (s.fees?.balance > 0);
+                            }).length > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
+                                        {allStudents.filter(s => {
+                                            const isMyDept = teacherProfile?.dept ? s.dept?.includes(teacherProfile.dept.split('(')[0].trim()) : true;
+                                            return isMyDept && (s.fees?.balance > 0);
+                                        }).length}
+                                    </span>
+                                )}
+                        </div>
+                    </button>
+
+                    {selectedStudents.length > 0 && (
+                        <Button onClick={handleBulkPrint} variant="secondary">
+                            <Printer size={20} className="mr-2" />
+                            Print TC ({selectedStudents.length})
+                        </Button>
+                    )}
+                    <Button variant="outline" onClick={() => setIsProfileModalOpen(true)} className="gap-2">
+                        <Users size={18} /> View Profile
+                    </Button>
+                </div>
             </div>
 
             {/* Filter Dropdown - Matches the image */}
@@ -296,6 +376,14 @@ const TeacherDashboard = () => {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-slate-200">
+                                        <th className="p-4 w-10">
+                                            <input
+                                                type="checkbox"
+                                                checked={isAllSelected}
+                                                onChange={handleSelectAll}
+                                                className="rounded border-slate-300 text-brand-orange focus:ring-brand-orange"
+                                            />
+                                        </th>
                                         <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Name</th>
                                         <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Reg No</th>
                                         <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">NM ID</th>
@@ -313,6 +401,14 @@ const TeacherDashboard = () => {
 
                                         return (
                                             <tr key={student.id} className="border-b border-slate-100 hover:bg-slate-50">
+                                                <td className="p-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedStudents.includes(student.id)}
+                                                        onChange={() => handleSelectStudent(student.id)}
+                                                        className="rounded border-slate-300 text-brand-orange focus:ring-brand-orange"
+                                                    />
+                                                </td>
                                                 <td className="py-3 px-4 text-sm">
                                                     <button
                                                         onClick={() => setViewingStudent(student)}
@@ -334,7 +430,14 @@ const TeacherDashboard = () => {
                                                         {isPaid ? 'Paid' : `₹${balance.toLocaleString()}`}
                                                     </span>
                                                 </td>
-                                                <td className="py-3 px-4 text-sm">
+                                                <td className="py-3 px-4 text-sm flex gap-2">
+                                                    <button
+                                                        onClick={() => handleSinglePrint(student.id)}
+                                                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors mr-1"
+                                                        title={`Print TC for ${student.name}`}
+                                                    >
+                                                        <Printer size={16} />
+                                                    </button>
                                                     <button
                                                         onClick={() => handleEditClick(student)}
                                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
@@ -471,7 +574,7 @@ const TeacherDashboard = () => {
                                 {/* Fee Details */}
                                 <div>
                                     <h4 className="font-semibold text-brand-orange mb-3 border-b border-orange-100 pb-2">Fee Status</h4>
-                                    <div className="bg-slate-50 p-4 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                                    <div className="bg-slate-50 p-4 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-4 text-center mb-4">
                                         <div>
                                             <span className="text-slate-500 text-xs uppercase tracking-wider">Total Fees</span>
                                             <p className="text-lg font-bold text-slate-800">₹{Number(viewingStudent.fees?.total || 0).toLocaleString()}</p>
@@ -487,6 +590,54 @@ const TeacherDashboard = () => {
                                             </p>
                                         </div>
                                     </div>
+
+                                    {/* Detailed Payment History */}
+                                    <h5 className="font-semibold text-slate-700 mb-2 text-sm">Payment History</h5>
+                                    {(!viewingStudent.fees?.payments?.length && !viewingStudent.fees?.busPayments?.length && !viewingStudent.fees?.otherPayments?.length) ? (
+                                        <p className="text-sm text-slate-500 italic">No payment records found.</p>
+                                    ) : (
+                                        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                            <table className="w-full text-sm text-left">
+                                                <thead className="bg-slate-100 text-slate-600 font-medium">
+                                                    <tr>
+                                                        <th className="p-2 border-b">Bill No</th>
+                                                        <th className="p-2 border-b">Date</th>
+                                                        <th className="p-2 border-b">Type</th>
+                                                        <th className="p-2 border-b text-right">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {/* Tuition Payments */}
+                                                    {viewingStudent.fees?.payments?.map((p, i) => (
+                                                        <tr key={`tuition-${i}`} className="border-b last:border-0 hover:bg-slate-50">
+                                                            <td className="p-2">{p.billNo}</td>
+                                                            <td className="p-2">{p.date}</td>
+                                                            <td className="p-2 text-slate-500">Tuition</td>
+                                                            <td className="p-2 text-right font-medium">₹{Number(p.amount).toLocaleString()}</td>
+                                                        </tr>
+                                                    ))}
+                                                    {/* Bus Payments */}
+                                                    {viewingStudent.fees?.busPayments?.map((p, i) => (
+                                                        <tr key={`bus-${i}`} className="border-b last:border-0 hover:bg-slate-50">
+                                                            <td className="p-2">{p.billNo}</td>
+                                                            <td className="p-2">{p.date}</td>
+                                                            <td className="p-2 text-slate-500">Bus Fee</td>
+                                                            <td className="p-2 text-right font-medium">₹{Number(p.amount).toLocaleString()}</td>
+                                                        </tr>
+                                                    ))}
+                                                    {/* Other Payments */}
+                                                    {viewingStudent.fees?.otherPayments?.map((p, i) => (
+                                                        <tr key={`other-${i}`} className="border-b last:border-0 hover:bg-slate-50">
+                                                            <td className="p-2">{p.billNo}</td>
+                                                            <td className="p-2">{p.date}</td>
+                                                            <td className="p-2 text-slate-500">{p.description || 'Other'}</td>
+                                                            <td className="p-2 text-right font-medium">₹{Number(p.amount).toLocaleString()}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -552,6 +703,9 @@ const TeacherDashboard = () => {
                     </div>
                 )}
             </AnimatePresence>
+            {/* Print Modal */}
+
+
         </div >
     );
 };

@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManageStudents from "./pages/admin/ManageStudents";
 import ManageTeachers from "./pages/admin/ManageTeachers";
+import ManageAdmins from "./pages/admin/ManageAdmins";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import TCGenerator from "./pages/student/TCGenerator";
@@ -22,7 +23,7 @@ function App() {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/students" element={<ManageStudents />} />
               <Route path="/admin/teachers" element={<ManageTeachers />} />
-              {/* Add other admin routes here */}
+              <Route path="/admin/admins" element={<ManageAdmins />} />
             </Route>
           </Route>
 

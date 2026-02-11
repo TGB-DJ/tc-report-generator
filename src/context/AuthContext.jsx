@@ -170,8 +170,19 @@ export const AuthProvider = ({ children }) => {
             }
 
             return user;
+            return user;
         } catch (error) {
             console.error("Google Login Error:", error);
+            if (error.code === 'auth/account-exists-with-different-credential') {
+                // This happens if the user has a password account but tries to sign in with Google
+                // and "One account per email address" is enabled in Firebase Console.
+                // We can't automatically link without the password, but we can notify the user.
+                throw new Error("An account with this email already exists. Please login with your password.");
+            }
+            // Handle the specific case where we want to allow Google Login to takeover/link
+            // For a school app, if the email matches, we generally trust the Google Account.
+            // However, Firebase security requires successful login with the FIRST method before linking.
+
             throw error;
         }
     };
