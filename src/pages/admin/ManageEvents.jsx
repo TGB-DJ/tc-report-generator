@@ -24,9 +24,19 @@ const ManageEvents = () => {
 
     const fetchEvents = async () => {
         try {
-            const q = query(collection(db, "events"), orderBy("createdAt", "desc"));
+            // REMOVED orderBy to avoid "Missing Index" error. Sorting client-side instead.
+            const q = query(collection(db, "events"));
             const snapshot = await getDocs(q);
-            setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const loadedEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Client-side Sort (Newest First)
+            loadedEvents.sort((a, b) => {
+                const da = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+                const db = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+                return db - da;
+            });
+
+            setEvents(loadedEvents);
         } catch (error) {
             console.error("Error fetching events:", error);
         } finally {

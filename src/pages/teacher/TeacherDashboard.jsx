@@ -89,17 +89,24 @@ const TeacherDashboard = () => {
             if (!user) return;
             try {
                 // 1. Fetch Events (All + Teacher Specific)
+                // REMOVED orderBy to avoid "Missing Index" error. Sorting client-side instead.
                 const q = query(
                     collection(db, "events"),
-                    where("target", "in", ["all", "teacher"]),
-                    orderBy("createdAt", "desc")
+                    where("target", "in", ["all", "teacher"])
                 );
                 const snapshot = await getDocs(q);
-                const allEvents = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    type: 'event',
-                    ...doc.data()
-                }));
+                const allEvents = snapshot.docs
+                    .map(doc => ({
+                        id: doc.id,
+                        type: 'event',
+                        ...doc.data()
+                    }))
+                    .sort((a, b) => {
+                        // sort by createdAt desc
+                        const da = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+                        const db = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+                        return db - da;
+                    });
 
                 // 2. Fetch User's Read/Cleared Status
                 const userDoc = await getDoc(doc(db, "users", user.uid));

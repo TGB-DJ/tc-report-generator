@@ -34,13 +34,22 @@ const StudentDashboard = () => {
             if (!user) return;
             try {
                 // Fetch Events (All + Student Specific)
+                // REMOVED orderBy to avoid "Missing Index" error. Sorting client-side instead.
                 const q = query(
                     collection(db, "events"),
-                    where("target", "in", ["all", "student"]),
-                    orderBy("createdAt", "desc")
+                    where("target", "in", ["all", "student"])
                 );
+
                 const snapshot = await getDocs(q);
-                const allEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Client-side Sort
+                const allEvents = snapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .sort((a, b) => {
+                        // sort by createdAt desc
+                        const da = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+                        const db = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+                        return db - da;
+                    });
 
                 // Filter out cleared/read events (if using 30-day logic)
                 // For now, let's load user's read status
