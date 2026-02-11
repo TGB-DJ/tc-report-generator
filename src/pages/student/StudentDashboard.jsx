@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { User, FileText, CheckCircle, AlertCircle, Eye } from 'lucide-react';
+import { User, FileText, CheckCircle, AlertCircle, Eye, Bell, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const StudentDashboard = () => {
@@ -29,8 +29,104 @@ const StudentDashboard = () => {
                 setLoading(false);
             }
         };
+
+        const fetchNotifications = async () => {
+            if (!user) return;
+            try {
+                // Fetch Events (All + Student Specific)
+                const q = query(
+                    collection(db, "events"),
+                    where("target", "in", ["all", "student"]),
+                    orderBy("createdAt", "desc")
+                );
+                const snapshot = await getDocs(q);
+                const allEvents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Filter out cleared/read events (if using 30-day logic)
+                // For now, let's load user's read status
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                const userData = userDoc.data();
+                const readEvents = userData?.readEvents || {}; // Map of { eventId: timestamp }
+                const clearedEvents = userData?.clearedEvents || []; // List of IDs
+
+                // Filter logic:
+                // 1. Not in clearedEvents
+                // 2. If Read, check if > 30 days old (optional, but requested)
+
+                const validEvents = allEvents.filter(event => {
+                    if (clearedEvents.includes(event.id)) return false;
+
+                    if (readEvents[event.id]) {
+                        const readDate = new Date(readEvents[event.id]);
+                        const daysSinceRead = (new Date() - readDate) / (1000 * 60 * 60 * 24);
+                        if (daysSinceRead > 30) return false;
+                    }
+                    return true;
+                });
+
+                // Attach read status
+                const eventsWithStatus = validEvents.map(event => ({
+                    ...event,
+                    isRead: !!readEvents[event.id]
+                }));
+
+                setNotifications(eventsWithStatus);
+                setUnreadCount(eventsWithStatus.filter(e => !e.isRead).length);
+
+            } catch (error) {
+                console.error("Error fetching notifications:", error);
+            }
+        };
+
         fetchProfile();
+        fetchNotifications();
     }, [user]);
+
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+    const markAsRead = async (notification) => {
+        if (notification.isRead) return;
+
+        try {
+            // Update Local State
+            setNotifications(prev => prev.map(n =>
+                n.id === notification.id ? { ...n, isRead: true } : n
+            ));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+
+            // Update Firestore
+            const userRef = doc(db, "users", user.uid);
+            // We use dot notation for updating map fields without overwriting
+            await updateDoc(userRef, {
+                [`readEvents.${notification.id}`]: new Date().toISOString()
+            });
+
+        } catch (error) {
+            console.error("Error marking read:", error);
+        }
+    };
+
+    const clearNotification = async (e, notificationId) => {
+        e.stopPropagation(); // Prevent triggering read
+        try {
+            // Update Local State
+            setNotifications(prev => prev.filter(n => n.id !== notificationId));
+
+            // Update Firestore
+            const userRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userRef);
+            const currentCleared = userDoc.data()?.clearedEvents || [];
+
+            await updateDoc(userRef, {
+                clearedEvents: [...currentCleared, notificationId]
+            });
+
+        } catch (error) {
+            console.error("Error clearing notification:", error);
+        }
+    };
 
     if (loading) return <div className="p-10 text-center">Loading profile...</div>;
     if (!student) return <div className="p-10 text-center">Student profile not found. Contact Admin.</div>;
@@ -94,21 +190,114 @@ const StudentDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold text-slate-800">Student Dashboard</h1>
-                <p className="text-slate-500">Welcome, {student.name}</p>
+            <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-800">Student Dashboard</h1>
+                    <p className="text-slate-500 text-sm">Welcome, {student.name}</p>
+                </div>
+
+                {/* Notification Bell */}
+                <div className="relative">
+                    <button
+                        onClick={() => setIsNotifOpen(!isNotifOpen)}
+                        className="p-2 rounded-full hover:bg-slate-100 relative transition-colors"
+                    >
+                        <Bell size={24} className="text-slate-600" />
+                        {unreadCount > 0 && (
+                            <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </button>
+
+                    <AnimatePresence>
+                        {isNotifOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
+                            >
+                                <div className="p-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                                    <h3 className="font-bold text-slate-700">Notifications</h3>
+                                    <button onClick={() => setIsNotifOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                                <div className="max-h-[60vh] overflow-y-auto">
+                                    {notifications.length === 0 ? (
+                                        <div className="p-8 text-center text-slate-500">
+                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <Bell size={20} className="text-slate-400" />
+                                            </div>
+                                            <p>No new notifications</p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-slate-50">
+                                            {notifications.map(notif => (
+                                                <div
+                                                    key={notif.id}
+                                                    onClick={() => markAsRead(notif)}
+                                                    className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-orange-50/30' : ''}`}
+                                                >
+                                                    <div className="flex justify-between items-start gap-3">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                {!notif.isRead && (
+                                                                    <span className="w-2 h-2 rounded-full bg-brand-orange"></span>
+                                                                )}
+                                                                <span className="text-xs text-slate-400">{notif.date}</span>
+                                                            </div>
+                                                            <h4 className={`text-sm font-semibold mb-1 ${!notif.isRead ? 'text-slate-900' : 'text-slate-600'}`}>
+                                                                {notif.title}
+                                                            </h4>
+                                                            <p className="text-xs text-slate-500 line-clamp-3">{notif.message}</p>
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => clearNotification(e, notif.id)}
+                                                            className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
+                                                            title="Clear Notification"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Profile Card */}
-                <Card>
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                            <User size={24} />
+                <Card className="md:col-span-2">
+                    <div className="flex items-start justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-orange to-orange-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-orange-500/20 overflow-hidden">
+                                {student.photoUrl ? (
+                                    <img src={student.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    student.name?.charAt(0)
+                                )}
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-800">{student.name}</h2>
+                                <p className="text-slate-500">{student.regno}</p>
+                            </div>
                         </div>
-                        <h3 className="text-xl font-bold">Academic Profile</h3>
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${student.fees?.balance === 0
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                            }`}>
+                            {student.fees?.balance === 0 ? "Fees Cleared" : "Fees Pending"}
+                        </div>
                     </div>
                     <div className="space-y-4">
+                        <h3 className="text-xl font-bold border-t pt-4">Academic Profile</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div>
                                 <p className="text-slate-500">Register No</p>
@@ -122,7 +311,6 @@ const StudentDashboard = () => {
                                 <p className="text-slate-500">Gender</p>
                                 <p className="font-semibold">{student.gender || '-'}</p>
                             </div>
-                            {/* ... existing fields ... */}
                             <div>
                                 <p className="text-slate-500">Semester</p>
                                 <p className="font-semibold text-brand-orange">Sem {student.semester || '1'}</p>
@@ -213,8 +401,8 @@ const StudentDashboard = () => {
                             View TC Format
                         </Button>
                     </div>
-            </div>
-        </Card>
+
+                </Card>
             </div >
         </div >
     );

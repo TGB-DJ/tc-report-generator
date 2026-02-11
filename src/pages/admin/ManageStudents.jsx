@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -40,6 +41,7 @@ const ManageStudents = () => {
     // Edit Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState(null);
+    const [photoFile, setPhotoFile] = useState(null); // NEW: File state
 
     // Bulk Actions State
     const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
@@ -64,9 +66,7 @@ const ManageStudents = () => {
         fatherName: '',
         nationality: 'INDIAN',
         religion: '',
-        nationality: 'INDIAN',
-        religion: '',
-        community: '',
+        community: '', // REMOVED DUPLICATE NATIONALITY/RELIGION
         gender: '',      // NEW
         admissionNo: '', // NEW
         aadharNo: '',    // NEW
@@ -98,7 +98,7 @@ const ManageStudents = () => {
             const querySnapshot = await getDocs(collection(db, "students"));
             const studentsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setStudents(studentsList);
-            setFilteredStudents(studentsList);
+            setFilteredStudents(studentsList); // Initialize filtered list
         } catch (error) {
             console.error("Error fetching students:", error);
         } finally {
@@ -130,38 +130,64 @@ const ManageStudents = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // NEW: Handle File Selection
+    const handleFileChange = (e) => {
+        if (e.target.files[0]) {
+            setPhotoFile(e.target.files[0]);
+        }
+    };
+
     const resetForm = () => {
         setFormData({
-            firstName: '', lastName: '', name: '', email: '', phone: '', password: '', regno: '', nmId: '', dept: '', class: '', semester: '',
+            firstName: '', lastName: '', name: '', email: '', phone: '', password: '',
+            regno: '', nmId: '', dept: '', class: '', semester: '',
             fatherName: '', nationality: 'INDIAN', religion: '', community: '', gender: '', admissionNo: '', aadharNo: '', panNo: '', otherInfo: '',
             dob: '', admissionDate: '',
             academicYear: '2025-2026', promotion: 'REFER MARK LIST', conduct: 'GOOD', leavingDate: '',
             feePayments: [], busPayments: [], otherPayments: [], feesTotal: '', feesBusTotal: '', feesPaid: '', feesBus: ''
         });
+        setPhotoFile(null);
         setEditingStudent(null);
         setFormError('');
     };
 
     const handleEdit = (student) => {
         setEditingStudent(student);
+        setPhotoFile(null); // Reset file
         setFormData({
-            ...student,
-            password: student.password || '', // Pre-fill password if available
-            semester: student.semester || '', // NEW
             firstName: student.firstName || '',
             lastName: student.lastName || '',
+            name: student.name || '',
+            email: student.email || '',
+            phone: student.phone || '',
+            password: student.password || '',
+            regno: student.regno || '',
+            nmId: student.nmId || '',
+            dept: student.dept || '',
+            class: student.class || '',
+            semester: student.semester || '',
+            fatherName: student.fatherName || '',
+            nationality: student.nationality || 'INDIAN',
+            religion: student.religion || '',
+            community: student.community || '',
             gender: student.gender || '',
             admissionNo: student.admissionNo || '',
             aadharNo: student.aadharNo || '',
             panNo: student.panNo || '',
             otherInfo: student.otherInfo || '',
-            feesTotal: student.fees?.total || '',
-            feesPaid: student.fees?.paid || '',
-            feesBusTotal: student.fees?.busTotal || '',
-            feesBus: student.fees?.busPaid || '',
+            dob: student.dob || '',
+            admissionDate: student.admissionDate || '',
+            academicYear: student.academicYear || '2025-2026',
+            promotion: student.promotion || 'REFER MARK LIST',
+            conduct: student.conduct || 'GOOD',
+            leavingDate: student.leavingDate || '',
             feePayments: student.fees?.payments || [],
             busPayments: student.fees?.busPayments || [],
-            otherPayments: student.fees?.otherPayments || []
+            otherPayments: student.fees?.otherPayments || [],
+            feesTotal: student.fees?.total || '',
+            feesBusTotal: student.fees?.busTotal || '',
+            feesPaid: student.fees?.paid || '',
+            feesBus: student.fees?.busPaid || ''
         });
         setIsModalOpen(true);
     };
@@ -188,14 +214,46 @@ const ManageStudents = () => {
         setFormError('');
 
         try {
+            const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+
             // Calculate Fees
             const tuitionPaid = formData.feePayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
             const busPaid = formData.busPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
             const otherPaid = formData.otherPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
+            // Base Student Data
+            let passwordToUse = formData.password;
+            if (!passwordToUse && formData.dob) {
+                // Default Password: DD-MM-YYYY
+                passwordToUse = formData.dob.split('-').reverse().join('-');
+            }
+
             const studentData = {
-                ...formData,
-                name: `${formData.firstName} ${formData.lastName}`.trim() || formData.name,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                name: fullName,
+                email: formData.email,
+                phone: formData.phone,
+                regno: formData.regno,
+                nmId: formData.nmId,
+                dept: formData.dept,
+                class: formData.class,
+                semester: formData.semester,
+                fatherName: formData.fatherName,
+                nationality: formData.nationality,
+                religion: formData.religion,
+                community: formData.community,
+                gender: formData.gender,
+                admissionNo: formData.admissionNo,
+                aadharNo: formData.aadharNo,
+                panNo: formData.panNo,
+                otherInfo: formData.otherInfo,
+                dob: formData.dob,
+                admissionDate: formData.admissionDate,
+                academicYear: formData.academicYear,
+                promotion: formData.promotion,
+                conduct: formData.conduct,
+                leavingDate: formData.leavingDate,
                 fees: {
                     total: Number(formData.feesTotal) || 0,
                     paid: tuitionPaid,
@@ -207,15 +265,13 @@ const ManageStudents = () => {
                     payments: formData.feePayments,
                     busPayments: formData.busPayments,
                     otherPayments: formData.otherPayments
-                }
+                },
+                password: passwordToUse // Store password for admin visibility
             };
 
-            // Remove password from studentData stored in firestore 'students' collection if it's empty
-            if (!studentData.password) delete studentData.password;
-
+            let docId;
 
             if (editingStudent) {
-                // Update
                 const studentRef = doc(db, "students", editingStudent.id);
                 await updateDoc(studentRef, studentData);
 
@@ -232,7 +288,10 @@ const ManageStudents = () => {
                 setSuccessMessage("Student updated successfully.");
             } else {
                 // Create
-                await createUser(formData.email, formData.password, 'student', studentData);
+                // Use computed password (either entered or default DOB)
+                if (!passwordToUse) throw new Error("Password is required (or DOB for default).");
+
+                await createUser(formData.email, passwordToUse, 'student', studentData);
                 setSuccessMessage("Student created successfully.");
             }
 
@@ -363,7 +422,7 @@ const ManageStudents = () => {
                 // For simplified "Semester Switch", we assume the admin knows who they filtered.
                 const newBusBalance = (Number(currentFees.busBalance) || 0) + busAdd;
 
-                const newBusBalance = (Number(currentFees.busBalance) || 0) + busAdd;
+
 
                 // Create Fee History Record
                 const newHistory = {
@@ -583,6 +642,27 @@ const ManageStudents = () => {
                                     </div>
                                 )}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* NEW: Profile Picture Input */}
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Profile Picture</label>
+                                        <div className="flex items-center gap-4">
+                                            {editingStudent?.photoUrl && (
+                                                <img
+                                                    src={editingStudent.photoUrl}
+                                                    alt="Current Profile"
+                                                    className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                                                />
+                                            )}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFileChange}
+                                                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-brand-orange hover:file:bg-orange-100"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-1">Upload a square image (JPG/PNG). It will be synced with the user profile.</p>
+                                    </div>
+
                                     <Input name="firstName" label="First Name" value={formData.firstName} onChange={handleInputChange} required autoComplete="off" />
                                     <Input name="lastName" label="Last Name" value={formData.lastName} onChange={handleInputChange} required autoComplete="off" />
                                     <Input name="fatherName" label="Father's Name / Guardian" value={formData.fatherName} onChange={handleInputChange} required autoComplete="off" />

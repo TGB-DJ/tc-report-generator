@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
 import { updateDoc } from 'firebase/firestore'; // Added updateDoc
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button'; // Added
 import Input from '../../components/ui/Input'; // Added
 import Toast from '../../components/ui/Toast'; // Added
 import Select from '../../components/Select';
-import { Users, Filter, Pencil, X, Printer } from 'lucide-react'; // Added Pencil, X
+import { Users, Filter, Pencil, X, Printer, Bell } from 'lucide-react'; // Added Pencil, X
 import { AnimatePresence, motion } from 'framer-motion'; // Added
 import BulkTCPrintModal from '../../components/BulkTCPrintModal';
 
@@ -78,7 +79,124 @@ const TeacherDashboard = () => {
         fetchData();
     }, [user]);
 
-    // Apply filters based on selected option
+    // Notification Logic
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (!user) return;
+            try {
+                // 1. Fetch Events (All + Teacher Specific)
+                const q = query(
+                    collection(db, "events"),
+                    where("target", "in", ["all", "teacher"]),
+                    orderBy("createdAt", "desc")
+                );
+                const snapshot = await getDocs(q);
+                const allEvents = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    type: 'event',
+                    ...doc.data()
+                }));
+
+                // 2. Fetch User's Read/Cleared Status
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                const userData = userDoc.data();
+                const readEvents = userData?.readEvents || {};
+                const clearedEvents = userData?.clearedEvents || [];
+
+                // 3. Filter Events
+                const validEvents = allEvents.filter(event => {
+                    if (clearedEvents.includes(event.id)) return false;
+                    if (readEvents[event.id]) {
+                        const readDate = new Date(readEvents[event.id]);
+                        const daysSinceRead = (new Date() - readDate) / (1000 * 60 * 60 * 24);
+                        if (daysSinceRead > 30) return false;
+                    }
+                    return true;
+                }).map(event => ({
+                    ...event,
+                    isRead: !!readEvents[event.id]
+                }));
+
+                // 4. Generate Fee Alerts (Local Only - Dynamic)
+                // Filter students in teacher's dept who have unpaid fees
+                let feeAlerts = [];
+                if (teacherProfile?.dept && allStudents.length > 0) {
+                    const coreSubject = teacherProfile.dept.split('(')[0].trim();
+                    const unpaidStudents = allStudents.filter(s =>
+                        s.dept && s.dept.includes(coreSubject) &&
+                        (Number(s.fees?.balance || 0) > 0)
+                    );
+
+                    if (unpaidStudents.length > 0) {
+                        feeAlerts.push({
+                            id: 'fee-alert-summary',
+                            type: 'alert',
+                            title: 'Pending Fees Alert',
+                            message: `${unpaidStudents.length} students in your department have pending fees.`,
+                            date: 'Today',
+                            isRead: false, // Always show as alert if condition exists
+                            action: () => setFeeStatus('unpaid') // Custom action
+                        });
+                    }
+                }
+
+                // Combine
+                const combined = [...feeAlerts, ...validEvents];
+                setNotifications(combined);
+                setUnreadCount(combined.filter(n => !n.isRead).length);
+
+            } catch (error) {
+                console.error("Error fetching notifications:", error);
+            }
+        };
+
+        if (teacherProfile && allStudents.length > 0) {
+            fetchNotifications();
+        }
+    }, [user, teacherProfile, allStudents]);
+
+    const markAsRead = async (notification) => {
+        if (notification.type === 'alert') {
+            if (notification.action) notification.action();
+            setIsNotifOpen(false);
+            return;
+        }
+
+        if (notification.isRead) return;
+
+        try {
+            setNotifications(prev => prev.map(n =>
+                n.id === notification.id ? { ...n, isRead: true } : n
+            ));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+
+            const userRef = doc(db, "users", user.uid);
+            await updateDoc(userRef, {
+                [`readEvents.${notification.id}`]: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error("Error marking read:", error);
+        }
+    };
+
+    const clearNotification = async (e, notificationId) => {
+        e.stopPropagation();
+        try {
+            setNotifications(prev => prev.filter(n => n.id !== notificationId));
+            const userRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userRef);
+            const currentCleared = userDoc.data()?.clearedEvents || [];
+            await updateDoc(userRef, {
+                clearedEvents: [...currentCleared, notificationId]
+            });
+        } catch (error) {
+            console.error("Error clearing:", error);
+        }
+    };
     useEffect(() => {
         let result = [...allStudents];
 
@@ -236,27 +354,96 @@ const TeacherDashboard = () => {
                         Welcome, {teacherProfile?.name} ({teacherProfile?.dept})
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-4">
+                    {/* Notification Bell */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsNotifOpen(!isNotifOpen)}
+                            className="p-2 rounded-full hover:bg-slate-100 relative transition-colors"
+                        >
+                            <Bell size={24} className="text-slate-600" />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
+
+                        <AnimatePresence>
+                            {isNotifOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
+                                >
+                                    <div className="p-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+                                        <h3 className="font-bold text-slate-700">Notifications</h3>
+                                        <button onClick={() => setIsNotifOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                    <div className="max-h-[60vh] overflow-y-auto">
+                                        {notifications.length === 0 ? (
+                                            <div className="p-8 text-center text-slate-500">
+                                                <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                    <Bell size={20} className="text-slate-400" />
+                                                </div>
+                                                <p>No new notifications</p>
+                                            </div>
+                                        ) : (
+                                            <div className="divide-y divide-slate-50">
+                                                {notifications.map(notif => (
+                                                    <div
+                                                        key={notif.id}
+                                                        onClick={() => markAsRead(notif)}
+                                                        className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-orange-50/30' : ''}`}
+                                                    >
+                                                        <div className="flex justify-between items-start gap-3">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    {!notif.isRead && (
+                                                                        <span className="w-2 h-2 rounded-full bg-brand-orange"></span>
+                                                                    )}
+                                                                    <span className="text-xs text-slate-400">{notif.date}</span>
+                                                                    {notif.type === 'alert' && (
+                                                                        <span className="bg-red-100 text-red-600 text-[10px] px-2 rounded-full font-bold">ALERT</span>
+                                                                    )}
+                                                                </div>
+                                                                <h4 className={`text-sm font-semibold mb-1 ${!notif.isRead ? 'text-slate-900' : 'text-slate-600'}`}>
+                                                                    {notif.title}
+                                                                </h4>
+                                                                <p className="text-xs text-slate-500 line-clamp-3">{notif.message}</p>
+                                                            </div>
+                                                            {notif.type !== 'alert' && (
+                                                                <button
+                                                                    onClick={(e) => clearNotification(e, notif.id)}
+                                                                    className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
+                                                                    title="Clear Notification"
+                                                                >
+                                                                    <X size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
                     <button
-                        onClick={() => setFeeStatus('unpaid')}
-                        className="relative p-2 mr-2 text-slate-600 hover:text-brand-orange transition-colors"
-                        title="View Students with Pending Fees"
+                        onClick={() => setIsProfileModalOpen(true)}
+                        className="w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange font-bold text-lg hover:bg-brand-orange hover:text-white transition-colors overflow-hidden border border-brand-orange/20"
                     >
-                        <div className="relative">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                            {allStudents.filter(s => {
-                                // Filter by dept first
-                                const isMyDept = teacherProfile?.dept ? s.dept?.includes(teacherProfile.dept.split('(')[0].trim()) : true;
-                                return isMyDept && (s.fees?.balance > 0);
-                            }).length > 0 && (
-                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
-                                        {allStudents.filter(s => {
-                                            const isMyDept = teacherProfile?.dept ? s.dept?.includes(teacherProfile.dept.split('(')[0].trim()) : true;
-                                            return isMyDept && (s.fees?.balance > 0);
-                                        }).length}
-                                    </span>
-                                )}
-                        </div>
+                        {teacherProfile?.photoUrl ? (
+                            <img src={teacherProfile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            teacherProfile?.name?.charAt(0)
+                        )}
                     </button>
 
                     {selectedStudents.length > 0 && (
@@ -669,8 +856,43 @@ const TeacherDashboard = () => {
 
                             <div className="p-8">
                                 <div className="flex flex-col items-center mb-6">
-                                    <div className="w-24 h-24 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange text-3xl font-bold mb-3">
-                                        {teacherProfile.name?.charAt(0).toUpperCase()}
+                                    <div className="relative group cursor-pointer">
+                                        <div className="w-24 h-24 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange text-3xl font-bold mb-3 overflow-hidden border-2 border-slate-100 group-hover:border-brand-orange transition-colors">
+                                            {teacherProfile.photoUrl ? (
+                                                <img src={teacherProfile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                                            ) : (
+                                                teacherProfile.name?.charAt(0).toUpperCase()
+                                            )}
+                                        </div>
+                                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity mb-3">
+                                            <Pencil className="text-white w-6 h-6" />
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer mb-3"
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+
+                                                try {
+                                                    const storageRef = ref(storage, `teachers/${user.uid}/profile.jpg`);
+                                                    await uploadBytes(storageRef, file);
+                                                    const photoUrl = await getDownloadURL(storageRef);
+
+                                                    // Update FireStore
+                                                    await updateDoc(doc(db, "teachers", user.uid), { photoUrl });
+                                                    await updateDoc(doc(db, "users", user.uid), { photoUrl });
+
+                                                    // Update Local State
+                                                    setTeacherProfile(prev => ({ ...prev, photoUrl }));
+                                                    alert("Profile picture updated!");
+                                                } catch (error) {
+                                                    console.error("Error uploading photo:", error);
+                                                    alert("Failed to upload photo.");
+                                                }
+                                            }}
+                                        />
                                     </div>
                                     <h4 className="text-2xl font-bold text-slate-800">{teacherProfile.name}</h4>
                                     <p className="text-slate-500">{teacherProfile.role ? teacherProfile.role.toUpperCase() : 'Teacher'}</p>
@@ -692,6 +914,10 @@ const TeacherDashboard = () => {
                                     <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                                         <span className="text-slate-500 text-sm">Employee ID</span>
                                         <span className="font-semibold text-slate-800">{teacherProfile.employeeId || 'N/A'}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                        <span className="text-slate-500 text-sm">Date of Birth</span>
+                                        <span className="font-semibold text-slate-800">{teacherProfile.dob || 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>

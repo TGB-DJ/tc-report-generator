@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Plus, Trash2, Pencil, RefreshCw } from 'lucide-react';
 import Button from '../../components/ui/Button';
@@ -15,6 +16,7 @@ const ManageTeachers = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTeacher, setEditingTeacher] = useState(null);
+    const [photoFile, setPhotoFile] = useState(null); // NEW: File state
     const { createUser } = useAuth();
 
     // Form State
@@ -54,8 +56,16 @@ const ManageTeachers = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    // NEW: Handle File Selection
+    const handleFileChange = (e) => {
+        if (e.target.files[0]) {
+            setPhotoFile(e.target.files[0]);
+        }
+    };
+
     const handleEdit = (teacher) => {
         setEditingTeacher(teacher);
+        setPhotoFile(null); // Reset file
         setFormData({
             name: teacher.name || '',
             email: teacher.email || '',
@@ -89,15 +99,18 @@ const ManageTeachers = () => {
                 ...(formData.password && { password: formData.password }) // Update stored password if provided
             };
 
+            let docId;
+
             if (editingTeacher) {
                 // UPDATE Logic
-                await setDoc(doc(db, "teachers", editingTeacher.id), {
+                docId = editingTeacher.id;
+                await setDoc(doc(db, "teachers", docId), {
                     ...teacherData,
                     email: formData.email // Ensure email is synced in Firestore
                 }, { merge: true });
 
                 // Update 'users' collection too
-                await setDoc(doc(db, "users", editingTeacher.id), {
+                await setDoc(doc(db, "users", docId), {
                     email: formData.email,
                     phone: formData.phone,
                     role: teacherData.role
@@ -106,19 +119,46 @@ const ManageTeachers = () => {
                 alert("Teacher updated successfully!");
             } else {
                 // CREATE Logic
-                await createUser(formData.email, formData.password, formData.isHod ? 'hod' : 'teacher', teacherData);
+                let passwordToUse = formData.password;
+                if (!passwordToUse && formData.dob) {
+                    // Default Password: DD-MM-YYYY using DOB
+                    passwordToUse = formData.dob.split('-').reverse().join('-');
+                } else if (!passwordToUse && formData.doj) {
+                    // Fallback to DOJ if DOB missing (though DOB should be required now)
+                    passwordToUse = formData.doj.split('-').reverse().join('-');
+                }
+
+                if (!passwordToUse) throw new Error("Password is required (or DOB for default).");
+
+                const userCred = await createUser(formData.email, passwordToUse, formData.isHod ? 'hod' : 'teacher', {
+                    ...teacherData,
+                    password: passwordToUse // Store for admin visibility
+                });
+                docId = userCred.user.uid;
                 alert("Teacher created successfully!");
+            }
+
+            // NEW: Handle Photo Upload
+            if (photoFile && docId) {
+                const storageRef = ref(storage, `teachers/${docId}/profile.jpg`);
+                await uploadBytes(storageRef, photoFile);
+                const photoUrl = await getDownloadURL(storageRef);
+
+                // Update 'teachers' and 'users' with photoUrl
+                await setDoc(doc(db, "teachers", docId), { photoUrl }, { merge: true });
+                await setDoc(doc(db, "users", docId), { photoUrl }, { merge: true });
             }
 
             setIsModalOpen(false);
             setFormData({
-                name: '', email: '', phone: '', password: '', gender: '', cid: '', dept: '', doj: '', qualification: '', isHod: false
+                name: '', email: '', phone: '', password: '', gender: '', cid: '', dept: '', doj: '', dob: '', qualification: '', isHod: false
             });
+            setPhotoFile(null);
             setEditingTeacher(null);
             fetchTeachers();
         } catch (error) {
             console.error('Error saving teacher:', error);
-            const errorMsg = error.message || 'Unknown error occurred';
+            const errorMsg = error.message.replace("Firebase: ", "");
             setFormError(errorMsg);
             alert("Error: " + errorMsg);
         } finally {
@@ -174,7 +214,7 @@ const ManageTeachers = () => {
                     <Button onClick={() => {
                         setEditingTeacher(null);
                         setFormData({
-                            name: '', email: '', phone: '', password: '', gender: '', cid: '', dept: '', doj: '', qualification: '', isHod: false
+                            name: '', email: '', phone: '', password: '', gender: '', cid: '', dept: '', doj: '', dob: '', qualification: '', isHod: false
                         });
                         setIsModalOpen(true);
                     }}>
@@ -256,13 +296,35 @@ const ManageTeachers = () => {
                                         {formError}
                                     </div>
                                 )}
+
+                                {/* NEW: Profile Picture Input */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Profile Picture</label>
+                                    <div className="flex items-center gap-4">
+                                        {editingTeacher?.photoUrl && (
+                                            <img
+                                                src={editingTeacher.photoUrl}
+                                                alt="Current Profile"
+                                                className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                                            />
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-brand-orange hover:file:bg-orange-100"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-1">Upload a square image (JPG/PNG).</p>
+                                </div>
+
                                 <Input name="name" label="Full Name" value={formData.name} onChange={handleInputChange} required autoComplete="off" />
                                 <Input name="cid" label="College ID (CID)" value={formData.cid} onChange={handleInputChange} required autoComplete="off" />
                                 <Input name="phone" label="Phone Number" value={formData.phone} onChange={handleInputChange} required autoComplete="off" />
                                 <Input name="email" label="Email" type="email" value={formData.email} onChange={handleInputChange} required autoComplete="off" />
                                 <Input
                                     name="password"
-                                    label={editingTeacher ? "New Password (Optional)" : "Password"}
+                                    label={editingTeacher ? "Password (leave blank to keep current)" : "Password"}
                                     type="text" // Visible as requested
                                     value={formData.password}
                                     onChange={handleInputChange}
@@ -303,7 +365,10 @@ const ManageTeachers = () => {
                                         Assign as Head of Department (HOD)
                                     </label>
                                 </div>
-                                <Input name="doj" label="Date of Joining" type="date" value={formData.doj} onChange={handleInputChange} required autoComplete="off" />
+                                <div className="grid grid-cols-2 gap-4 mt-4">
+                                    <Input name="doj" label="Date of Joining" type="date" value={formData.doj} onChange={handleInputChange} required autoComplete="off" />
+                                    <Input name="dob" label="Date of Birth" type="date" value={formData.dob} onChange={handleInputChange} required autoComplete="off" />
+                                </div>
 
                                 <div className="pt-6 flex justify-end gap-3">
                                     <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
@@ -314,9 +379,10 @@ const ManageTeachers = () => {
                             </form>
                         </motion.div>
                     </div>
-                )}
-            </AnimatePresence>
-        </div>
+                )
+                }
+            </AnimatePresence >
+        </div >
     );
 };
 

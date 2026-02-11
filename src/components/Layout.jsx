@@ -57,7 +57,7 @@ const Layout = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(true); // Default collapsed
 
-    const isTeacherLayout = userData?.role === 'teacher' || userData?.role === 'hod';
+    const isTeacherLayout = userData?.role === 'teacher'; // HOD gets full sidebar now
 
     const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
@@ -76,9 +76,19 @@ const Layout = () => {
                         )}
                     </>
                 );
-            case 'teacher':
             case 'hod':
-                return null;
+                return (
+                    <>
+                        <SidebarLink to="/teacher" icon={Home} label="Dashboard" {...commonProps} />
+                        <SidebarLink to="/admin/students" icon={GraduationCap} label="Students" {...commonProps} />
+                        <SidebarLink to="/admin/teachers" icon={Users} label="Teachers" {...commonProps} />
+                        <SidebarLink to="/admin/events" icon={FileText} label="Events" {...commonProps} />
+                    </>
+                );
+            case 'teacher':
+                return (
+                    <SidebarLink to="/teacher" icon={Home} label="Dashboard" {...commonProps} />
+                );
 
             case 'student':
                 return (
@@ -230,8 +240,12 @@ const Layout = () => {
                             <p className="text-sm font-medium text-slate-900">{userData?.email}</p>
                             <p className="text-xs text-slate-500 capitalize">{userData?.role}</p>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-orange to-red-500 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-orange-500/20">
-                            {userData?.email?.[0].toUpperCase()}
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-orange to-red-500 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-orange-500/20 overflow-hidden">
+                            {userData?.photoUrl ? (
+                                <img src={userData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                userData?.email?.[0].toUpperCase()
+                            )}
                         </div>
                     </div>
                 </header>
