@@ -21,11 +21,7 @@ const Login = () => {
     useEffect(() => {
         if (userData) {
             if (userData.role === 'admin') {
-                if (userData.isSuperAdmin || userData.email === 'chirenjeevi7616@gmail.com') {
-                    navigate('/admin/admins');
-                } else {
-                    navigate('/admin');
-                }
+                navigate('/admin'); // Always go to Dashboard first
             }
             else if (['teacher', 'hod'].includes(userData.role)) {
                 navigate('/teacher');
@@ -38,43 +34,64 @@ const Login = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        console.log("Sign In button clicked. Identifier:", identifier); // DEBUG
+
         setError('');
         setLoading(true);
 
         try {
             let loginEmail = identifier.trim();
             const inputLower = loginEmail.toLowerCase();
+            console.log("Analyzing identifier:", inputLower); // DEBUG
 
             // 1. Check if Email
             const isEmail = inputLower.includes('@');
 
             if (!isEmail) {
                 // 2. Check if Phone (Digits only > 6)
-                // Remove spaces/dashes
                 const cleanPhone = identifier.replace(/[\s-]/g, '');
                 const isPhone = /^\d{7,}$/.test(cleanPhone);
+                console.log("Is Phone?", isPhone); // DEBUG
 
                 if (isPhone) {
-                    const q = query(collection(db, "users"), where("phone", "==", identifier)); // Keep original for now or clean? Let's use clean if stored clean. Assuming stored as is.
-                    // Actually, let's try strict match first.
-                    const querySnapshot = await getDocs(q);
+                    // Try 'users' collection first
+                    const q = query(collection(db, "users"), where("phone", "==", identifier));
+                    let querySnapshot = await getDocs(q);
+
                     if (!querySnapshot.empty) {
                         loginEmail = querySnapshot.docs[0].data().email;
+                        console.log("Found email in Users:", loginEmail); // DEBUG
                     } else {
-                        // Double check strictly digits? 
-                        throw new Error("Phone number not found.");
+                        // Check Students
+                        const qStudentPhone = query(collection(db, "students"), where("phone", "==", identifier));
+                        const studentPhoneSnap = await getDocs(qStudentPhone);
+
+                        if (!studentPhoneSnap.empty) {
+                            loginEmail = studentPhoneSnap.docs[0].data().email;
+                            console.log("Found email in Students:", loginEmail); // DEBUG
+                        } else {
+                            // Check Teachers
+                            const qTeacherPhone = query(collection(db, "teachers"), where("phone", "==", identifier));
+                            const teacherPhoneSnap = await getDocs(qTeacherPhone);
+
+                            if (!teacherPhoneSnap.empty) {
+                                loginEmail = teacherPhoneSnap.docs[0].data().email;
+                                console.log("Found email in Teachers:", loginEmail); // DEBUG
+                            } else {
+                                throw new Error("Phone number not found in any database records.");
+                            }
+                        }
                     }
                 } else {
                     // 3. Check Register Number (Student)
-                    // Strategy: specific formats? Or just query 'students' then 'teachers'.
-                    // Students are more likely to login via RegNo.
-
+                    console.log("Checking Register Number / Staff ID..."); // DEBUG
                     const studentsRef = collection(db, "students");
                     const qStudent = query(studentsRef, where("regno", "==", identifier));
                     const studentSnap = await getDocs(qStudent);
 
                     if (!studentSnap.empty) {
                         loginEmail = studentSnap.docs[0].data().email;
+                        console.log("Found student email:", loginEmail); // DEBUG
                     } else {
                         // 4. Check Staff ID (CID) -> Teachers
                         const teachersRef = collection(db, "teachers");
@@ -83,20 +100,23 @@ const Login = () => {
 
                         if (!teacherSnap.empty) {
                             loginEmail = teacherSnap.docs[0].data().email;
+                            console.log("Found teacher email:", loginEmail); // DEBUG
                         } else {
-                            // 5. Fallback: maybe it's a numeric RegNo but entered differently?
-                            // Or maybe an Admin? Admins usually use Email.
                             throw new Error("ID / Register Number not found.");
                         }
                     }
                 }
             }
 
+            console.log("Attempting Firebase Auth with:", loginEmail); // DEBUG
             await login(loginEmail, password);
+            console.log("Firebase Auth successful"); // DEBUG
+
         } catch (err) {
-            console.error(err);
-            setError(err.message || 'Authentication failed. Check credentials.');
+            console.error("Login Error:", err);
+            setError(err.message || 'Authentication failed. Please check your credentials.');
         } finally {
+            console.log("Login attempt finished. Loading: false"); // DEBUG
             setLoading(false);
         }
     };

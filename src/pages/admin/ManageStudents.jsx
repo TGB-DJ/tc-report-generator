@@ -9,10 +9,16 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/Select';
 import FeePaymentInput from '../../components/FeePaymentInput';
 import Toast from '../../components/ui/Toast';
-import { Trash2, Plus, Filter, X, Pencil, Printer } from 'lucide-react';
+import { Trash2, Plus, Filter, X, Pencil, Printer, Eye } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DEPARTMENT_CATEGORIES, getYearOptions } from '../../constants/departments';
+import { RELIGIONS, COMMUNITIES } from '../../constants/studentData';
 import BulkTCPrintModal from '../../components/BulkTCPrintModal';
+
+const STUDENT_STATUS = {
+    CURRENT: 'current',
+    ALUMNI: 'alumni'
+};
 
 const ManageStudents = () => {
     // Data State
@@ -23,6 +29,7 @@ const ManageStudents = () => {
     const { createUser } = useAuth(); // Assuming createUser is exposed in AuthContext for admin actions
 
     // Filters State
+    const [statusFilter, setStatusFilter] = useState(STUDENT_STATUS.CURRENT); // NEW: 'current' or 'alumni'
     const [filters, setFilters] = useState({
         dept: '',
         class: '',
@@ -40,102 +47,26 @@ const ManageStudents = () => {
 
     // Edit Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isViewOnly, setIsViewOnly] = useState(false); // NEW: View Only Mode
     const [editingStudent, setEditingStudent] = useState(null);
-    const [photoFile, setPhotoFile] = useState(null); // NEW: File state
+    const [photoFile, setPhotoFile] = useState(null);
 
-    // Bulk Actions State
-    const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
-    const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
-    const [bulkAmount, setBulkAmount] = useState({ tuition: '', bus: '' });
-    const [promoteConfirm, setPromoteConfirm] = useState('');
-
-    // Form State
     const [formData, setFormData] = useState({
-        firstName: '', // Split Name
-        lastName: '',  // Split Name
-        name: '',      // Legacy/DB field (auto-generated)
-        email: '',
-        phone: '',
-        password: '',
-        regno: '',
-        nmId: '', // Naan Mudhalvan ID
-        dept: '',
-        class: '',
-        semester: '', // NEW
-        // TC Required Fields
-        fatherName: '',
-        nationality: 'INDIAN',
-        religion: '',
-        community: '', // REMOVED DUPLICATE NATIONALITY/RELIGION
-        gender: '',      // NEW
-        admissionNo: '', // NEW
-        aadharNo: '',    // NEW
-        panNo: '',       // NEW
-        otherInfo: '',   // NEW
-        dob: '',
-        admissionDate: '',
-        academicYear: '2025-2026',
-        promotion: 'REFER MARK LIST',
-        conduct: 'GOOD',
-        leavingDate: '',
-        // Fee Payments
-        feePayments: [], // Tuition
-        busPayments: [], // Bus (Multi-bill)
-        otherPayments: [], // Other (with description)
-        feesTotal: '',   // Total Tuition Fee
-        feesBusTotal: '', // Total Bus Fee
-        feesPaid: '', // Legacy/Calc
-        feesBus: '' // Legacy/Calc
+        firstName: '', lastName: '', name: '', email: '', phone: '', password: '',
+        regno: '', nmId: '', dept: '', class: '', semester: '',
+        fatherName: '', nationality: 'INDIAN', religion: '', community: '', gender: '', admissionNo: '', aadharNo: '', panNo: '', otherInfo: '',
+        dob: '', admissionDate: '',
+        academicYear: '2025-2026', promotion: 'REFER MARK LIST', conduct: 'GOOD', leavingDate: '',
+        feePayments: [], busPayments: [], otherPayments: [], feesTotal: '', feesBusTotal: '', feesPaid: '', feesBus: ''
     });
 
-    useEffect(() => {
-        fetchStudents();
-    }, []);
+    // Bulk Modal States
+    const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
+    const [promoteConfirm, setPromoteConfirm] = useState('');
 
-    const fetchStudents = async () => {
-        try {
-            setLoading(true);
-            const querySnapshot = await getDocs(collection(db, "students"));
-            const studentsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setStudents(studentsList);
-            setFilteredStudents(studentsList); // Initialize filtered list
-        } catch (error) {
-            console.error("Error fetching students:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Filter Logic
-    useEffect(() => {
-        let result = [...students];
-
-        if (filters.dept) {
-            result = result.filter(s => s.dept === filters.dept);
-        }
-        if (filters.class) {
-            result = result.filter(s => s.class === filters.class);
-        }
-        if (filters.academicYear) {
-            result = result.filter(s => s.academicYear === filters.academicYear);
-        }
-
-        setFilteredStudents(result);
-    }, [filters, students]);
-
-
-    // Handlers
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    // NEW: Handle File Selection
-    const handleFileChange = (e) => {
-        if (e.target.files[0]) {
-            setPhotoFile(e.target.files[0]);
-        }
-    };
+    // Fee Modal States
+    const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
+    const [bulkAmount, setBulkAmount] = useState({ tuition: '', bus: '' });
 
     const resetForm = () => {
         setFormData({
@@ -148,12 +79,27 @@ const ManageStudents = () => {
         });
         setPhotoFile(null);
         setEditingStudent(null);
+        setIsViewOnly(false); // Reset View Mode
         setFormError('');
     };
 
     const handleEdit = (student) => {
         setEditingStudent(student);
+        setIsViewOnly(false); // Enable Edit Mode
         setPhotoFile(null); // Reset file
+        populateForm(student);
+        setIsModalOpen(true);
+    };
+
+    const handleView = (student) => {
+        setEditingStudent(student);
+        setIsViewOnly(true); // Enable View Mode
+        setPhotoFile(null);
+        populateForm(student);
+        setIsModalOpen(true);
+    };
+
+    const populateForm = (student) => {
         setFormData({
             firstName: student.firstName || '',
             lastName: student.lastName || '',
@@ -189,7 +135,6 @@ const ManageStudents = () => {
             feesPaid: student.fees?.paid || '',
             feesBus: student.fees?.busPaid || ''
         });
-        setIsModalOpen(true);
     };
 
     const handleDelete = async (id, name) => {
@@ -205,6 +150,17 @@ const ManageStudents = () => {
         } catch (error) {
             console.error("Error deleting student:", error);
             alert("Failed to delete student.");
+        }
+    };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files[0]) {
+            setPhotoFile(e.target.files[0]);
         }
     };
 
@@ -493,24 +449,61 @@ const ManageStudents = () => {
 
             {/* Filter Section */}
             <Card className="p-4">
-                <div className="flex items-center gap-2 mb-3 text-slate-600">
-                    <Filter size={18} />
-                    <span className="font-medium">Filters</span>
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-4">
+                    {/* Status Tabs */}
+                    <div className="bg-slate-100 p-1 rounded-lg inline-flex">
+                        <button
+                            onClick={() => setStatusFilter(STUDENT_STATUS.CURRENT)}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${statusFilter === STUDENT_STATUS.CURRENT
+                                ? 'bg-white text-brand-orange shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            Current Students
+                        </button>
+                        <button
+                            onClick={() => setStatusFilter(STUDENT_STATUS.ALUMNI)}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${statusFilter === STUDENT_STATUS.ALUMNI
+                                ? 'bg-white text-brand-orange shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            Alumni
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-slate-600">
+                        <Filter size={18} />
+                        <span className="font-medium">Filters</span>
+                    </div>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Select
                         label="Department"
                         value={filters.dept}
-                        onChange={(e) => setFilters(prev => ({ ...prev, dept: e.target.value }))}
+                        onChange={(e) => setFilters(prev => ({ ...prev, dept: e.target.value, class: '' }))}
                         groupedOptions={DEPARTMENT_CATEGORIES}
                     />
+
+                    {/* Only show Class filter for Current Students */}
+                    {statusFilter === STUDENT_STATUS.CURRENT && (
+                        <Select
+                            label="Class/Year"
+                            value={filters.class}
+                            onChange={(e) => setFilters(prev => ({ ...prev, class: e.target.value }))}
+                            options={filters.dept ? getYearOptions(filters.dept) : ['1st Year', '2nd Year', '3rd Year']}
+                        />
+                    )}
+
+                    {/* Show Academic Year (Batch) for Alumni (or optional for current) */}
                     <Select
-                        label="Class/Year"
-                        value={filters.class}
-                        onChange={(e) => setFilters(prev => ({ ...prev, class: e.target.value }))}
-                        options={['1st Year', '2nd Year', '3rd Year']} // Simplified for filter
+                        label={statusFilter === STUDENT_STATUS.ALUMNI ? "Batch (Academic Year)" : "Academic Year"}
+                        value={filters.academicYear}
+                        onChange={(e) => setFilters(prev => ({ ...prev, academicYear: e.target.value }))}
+                        // You might want to dynamically generate these or fetch from DB
+                        options={['2022-2023', '2023-2024', '2024-2025', '2025-2026']}
                     />
-                    {/* Add more filters if needed */}
                 </div>
 
                 {/* Bulk Actions Toolbar (Visible only when filters active) */}
@@ -554,6 +547,7 @@ const ManageStudents = () => {
                                 <th className="p-4 font-semibold text-slate-600">Name</th>
                                 <th className="p-4 font-semibold text-slate-600">Phone</th>
                                 <th className="p-4 font-semibold text-slate-600">Department</th>
+                                <th className="p-4 font-semibold text-slate-600">Year</th>
                                 <th className="p-4 font-semibold text-slate-600">Balance</th>
                                 <th className="p-4 font-semibold text-slate-600">Actions</th>
                             </tr>
@@ -587,10 +581,18 @@ const ManageStudents = () => {
                                         </td>
                                         <td className="p-4 text-slate-500">{student.phone || "-"}</td>
                                         <td className="p-4">{student.dept}</td>
+                                        <td className="p-4">{student.class}</td>
                                         <td className={`p-4 font-medium ${student.fees?.balance > 0 ? 'text-red-500' : 'text-green-500'}`}>
                                             ₹{student.fees?.balance || 0}
                                         </td>
                                         <td className="p-4 flex gap-2">
+                                            <button
+                                                onClick={() => handleView(student)}
+                                                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                title={`View ${student.name}`}
+                                            >
+                                                <Eye size={18} />
+                                            </button>
                                             <button
                                                 onClick={() => handleSinglePrint(student.id)}
                                                 className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -631,7 +633,9 @@ const ManageStudents = () => {
                             className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col"
                         >
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                                <h3 className="text-xl font-bold">{editingStudent ? 'Edit Student' : 'Add New Student'}</h3>
+                                <h3 className="text-xl font-bold">
+                                    {isViewOnly ? 'Student Details' : editingStudent ? 'Edit Student' : 'Add New Student'}
+                                </h3>
                                 <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="text-slate-400 hover:text-slate-600">×</button>
                             </div>
 
@@ -653,144 +657,174 @@ const ManageStudents = () => {
                                                     className="w-12 h-12 rounded-full object-cover border border-slate-200"
                                                 />
                                             )}
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFileChange}
-                                                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-brand-orange hover:file:bg-orange-100"
+                                            {!isViewOnly && (
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleFileChange}
+                                                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-brand-orange hover:file:bg-orange-100"
+                                                />
+                                            )}
+                                        </div>
+                                        {!isViewOnly && <p className="text-xs text-slate-400 mt-1">Upload a square image (JPG/PNG). It will be synced with the user profile.</p>}
+                                    </div>
+
+                                    <fieldset disabled={isViewOnly} className="contents">
+                                        <Input name="firstName" label="First Name" value={formData.firstName} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="lastName" label="Last Name" value={formData.lastName} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="fatherName" label="Father's Name / Guardian" value={formData.fatherName} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="regno" label="Register No" value={formData.regno} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="admissionNo" label="Admission No" value={formData.admissionNo} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="nmId" label="NM ID (Naan Mudhalvan)" value={formData.nmId} onChange={handleInputChange} autoComplete="off" />
+                                        <Input name="phone" label="Phone Number" value={formData.phone} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="email" label="Email" type="email" value={formData.email} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input
+                                            name="password"
+                                            label={editingStudent ? "Password (leave blank to keep current)" : "Password"}
+                                            type="text"
+                                            value={formData.password}
+                                            onChange={handleInputChange}
+                                            required={!editingStudent}
+                                            autoComplete="new-password"
+                                            placeholder={editingStudent ? "Leave blank to keep current" : "Required"}
+                                            disabled={isViewOnly} // Explicit disable for password
+                                        />
+                                        <Input name="nationality" label="Nationality" value={formData.nationality} onChange={handleInputChange} required autoComplete="off" />
+                                        <Select
+                                            name="gender"
+                                            label="Gender"
+                                            value={formData.gender}
+                                            onChange={handleInputChange}
+                                            options={['Male', 'Female', 'Other']}
+                                            required
+                                        />
+                                        <Select
+                                            name="religion"
+                                            label="Religion"
+                                            value={formData.religion}
+                                            onChange={handleInputChange}
+                                            options={RELIGIONS}
+                                            required
+                                        />
+                                        <Select
+                                            name="community"
+                                            label="Community"
+                                            value={formData.community}
+                                            onChange={handleInputChange}
+                                            options={COMMUNITIES}
+                                        />
+                                        <Input name="aadharNo" label="Aadhar No" value={formData.aadharNo} onChange={handleInputChange} autoComplete="off" />
+                                        <Input name="panNo" label="PAN No" value={formData.panNo} onChange={handleInputChange} autoComplete="off" />
+                                        <div className="md:col-span-2">
+                                            <Input name="otherInfo" label="Other Info" value={formData.otherInfo} onChange={handleInputChange} autoComplete="off" placeholder="Any other remarks..." />
+                                        </div>
+                                        <Select
+                                            name="dept"
+                                            label="Department"
+                                            value={formData.dept}
+                                            onChange={handleInputChange}
+                                            groupedOptions={DEPARTMENT_CATEGORIES}
+                                            required
+                                        />
+                                        <Select
+                                            name="class"
+                                            label="Year/Class"
+                                            value={formData.class}
+                                            onChange={handleInputChange}
+                                            options={formData.dept ? getYearOptions(formData.dept) : ['1st Year', '2nd Year', '3rd Year']}
+                                            required
+                                        />
+                                        <Select
+                                            name="semester"
+                                            label="Semester"
+                                            value={formData.semester}
+                                            onChange={handleInputChange}
+                                            options={
+                                                formData.class === '1st Year' ? ['1', '2'] :
+                                                    formData.class === '2nd Year' ? ['3', '4'] :
+                                                        formData.class === '3rd Year' ? ['5', '6'] :
+                                                            ['1', '2', '3', '4', '5', '6']
+                                            }
+                                            required
+                                        />
+                                    </fieldset>
+
+                                </div>
+
+                                <fieldset disabled={isViewOnly} className="contents">
+                                    <h4 className="font-semibold text-slate-700 pt-4">TC Details</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <Input name="dob" label="Date of Birth" type="date" value={formData.dob} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="admissionDate" label="Date of Admission" type="date" value={formData.admissionDate} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="academicYear" label="Academic Year" value={formData.academicYear} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="promotion" label="Promotion Status" value={formData.promotion} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="conduct" label="Conduct" value={formData.conduct} onChange={handleInputChange} required autoComplete="off" />
+                                        <Input name="leavingDate" label="Leaving Date (Optional)" type="date" value={formData.leavingDate} onChange={handleInputChange} autoComplete="off" />
+                                    </div>
+
+                                    <h4 className="font-semibold text-slate-700 pt-4">Fee Details</h4>
+                                    <div className="space-y-6">
+                                        {/* Tuition Fees */}
+                                        <div className="space-y-4 p-4 border border-blue-100 rounded-xl bg-blue-50/50">
+                                            <Input
+                                                name="feesTotal"
+                                                label="Total Tuition Fees (₹)"
+                                                type="number"
+                                                value={formData.feesTotal}
+                                                onChange={handleInputChange}
+                                                required
+                                                autoComplete="off"
+                                                placeholder="e.g., 30000"
+                                                className="bg-white"
+                                            />
+                                            <FeePaymentInput
+                                                title="Tuition Fee Payments"
+                                                payments={formData.feePayments}
+                                                onChange={(payments) => setFormData(prev => ({ ...prev, feePayments: payments }))}
                                             />
                                         </div>
-                                        <p className="text-xs text-slate-400 mt-1">Upload a square image (JPG/PNG). It will be synced with the user profile.</p>
+
+                                        {/* Bus Fees */}
+                                        <div className="space-y-4 p-4 border border-orange-100 rounded-xl bg-orange-50/50">
+                                            <Input
+                                                name="feesBusTotal"
+                                                label="Total Bus Fees (₹)"
+                                                type="number"
+                                                value={formData.feesBusTotal}
+                                                onChange={handleInputChange}
+                                                autoComplete="off"
+                                                placeholder="e.g., 15000"
+                                                className="bg-white"
+                                            />
+                                            <FeePaymentInput
+                                                title="Bus Fee Payments"
+                                                payments={formData.busPayments}
+                                                onChange={(payments) => setFormData(prev => ({ ...prev, busPayments: payments }))}
+                                            />
+                                        </div>
+
+                                        {/* Other Fees */}
+                                        <div className="space-y-4 p-4 border border-purple-100 rounded-xl bg-purple-50/50">
+                                            <h5 className="font-medium text-purple-900">Other Fees (Lab, Exam, etc.)</h5>
+                                            <FeePaymentInput
+                                                title="Other Fee Payments"
+                                                payments={formData.otherPayments}
+                                                onChange={(payments) => setFormData(prev => ({ ...prev, otherPayments: payments }))}
+                                                showDescription={true}
+                                            />
+                                        </div>
                                     </div>
-
-                                    <Input name="firstName" label="First Name" value={formData.firstName} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="lastName" label="Last Name" value={formData.lastName} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="fatherName" label="Father's Name / Guardian" value={formData.fatherName} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="regno" label="Register No" value={formData.regno} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="admissionNo" label="Admission No" value={formData.admissionNo} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="nmId" label="NM ID (Naan Mudhalvan)" value={formData.nmId} onChange={handleInputChange} autoComplete="off" />
-                                    <Input name="phone" label="Phone Number" value={formData.phone} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="email" label="Email" type="email" value={formData.email} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input
-                                        name="password"
-                                        label={editingStudent ? "Password (leave blank to keep current)" : "Password"}
-                                        type="text"
-                                        value={formData.password}
-                                        onChange={handleInputChange}
-                                        required={!editingStudent}
-                                        autoComplete="new-password"
-                                        placeholder={editingStudent ? "Leave blank to keep current" : "Required"}
-                                    />
-                                    <Input name="nationality" label="Nationality" value={formData.nationality} onChange={handleInputChange} required autoComplete="off" />
-                                    <Select
-                                        name="gender"
-                                        label="Gender"
-                                        value={formData.gender}
-                                        onChange={handleInputChange}
-                                        options={['Male', 'Female', 'Other']}
-                                        required
-                                    />
-                                    <Input name="religion" label="Religion" value={formData.religion} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="community" label="Community" value={formData.community} onChange={handleInputChange} autoComplete="off" />
-                                    <Input name="aadharNo" label="Aadhar No" value={formData.aadharNo} onChange={handleInputChange} autoComplete="off" />
-                                    <Input name="panNo" label="PAN No" value={formData.panNo} onChange={handleInputChange} autoComplete="off" />
-                                    <div className="md:col-span-2">
-                                        <Input name="otherInfo" label="Other Info" value={formData.otherInfo} onChange={handleInputChange} autoComplete="off" placeholder="Any other remarks..." />
-                                    </div>
-                                    <Select
-                                        name="dept"
-                                        label="Department"
-                                        value={formData.dept}
-                                        onChange={handleInputChange}
-                                        groupedOptions={DEPARTMENT_CATEGORIES}
-                                        required
-                                    />
-                                    <Select
-                                        name="class"
-                                        label="Year/Class"
-                                        value={formData.class}
-                                        onChange={handleInputChange}
-                                        options={formData.dept ? getYearOptions(formData.dept) : ['1st Year', '2nd Year', '3rd Year']}
-                                        required
-                                    />
-                                    <Select
-                                        name="semester"
-                                        label="Semester"
-                                        value={formData.semester}
-                                        onChange={handleInputChange}
-                                        options={['1', '2', '3', '4', '5', '6']}
-                                    />
-
-                                </div>
-
-                                <h4 className="font-semibold text-slate-700 pt-4">TC Details</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <Input name="dob" label="Date of Birth" type="date" value={formData.dob} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="admissionDate" label="Date of Admission" type="date" value={formData.admissionDate} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="academicYear" label="Academic Year" value={formData.academicYear} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="promotion" label="Promotion Status" value={formData.promotion} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="conduct" label="Conduct" value={formData.conduct} onChange={handleInputChange} required autoComplete="off" />
-                                    <Input name="leavingDate" label="Leaving Date (Optional)" type="date" value={formData.leavingDate} onChange={handleInputChange} autoComplete="off" />
-                                </div>
-
-                                <h4 className="font-semibold text-slate-700 pt-4">Fee Details</h4>
-                                <div className="space-y-6">
-                                    {/* Tuition Fees */}
-                                    <div className="space-y-4 p-4 border border-blue-100 rounded-xl bg-blue-50/50">
-                                        <Input
-                                            name="feesTotal"
-                                            label="Total Tuition Fees (₹)"
-                                            type="number"
-                                            value={formData.feesTotal}
-                                            onChange={handleInputChange}
-                                            required
-                                            autoComplete="off"
-                                            placeholder="e.g., 30000"
-                                            className="bg-white"
-                                        />
-                                        <FeePaymentInput
-                                            title="Tuition Fee Payments"
-                                            payments={formData.feePayments}
-                                            onChange={(payments) => setFormData(prev => ({ ...prev, feePayments: payments }))}
-                                        />
-                                    </div>
-
-                                    {/* Bus Fees */}
-                                    <div className="space-y-4 p-4 border border-orange-100 rounded-xl bg-orange-50/50">
-                                        <Input
-                                            name="feesBusTotal"
-                                            label="Total Bus Fees (₹)"
-                                            type="number"
-                                            value={formData.feesBusTotal}
-                                            onChange={handleInputChange}
-                                            autoComplete="off"
-                                            placeholder="e.g., 15000"
-                                            className="bg-white"
-                                        />
-                                        <FeePaymentInput
-                                            title="Bus Fee Payments"
-                                            payments={formData.busPayments}
-                                            onChange={(payments) => setFormData(prev => ({ ...prev, busPayments: payments }))}
-                                        />
-                                    </div>
-
-                                    {/* Other Fees */}
-                                    <div className="space-y-4 p-4 border border-purple-100 rounded-xl bg-purple-50/50">
-                                        <h5 className="font-medium text-purple-900">Other Fees (Lab, Exam, etc.)</h5>
-                                        <FeePaymentInput
-                                            title="Other Fee Payments"
-                                            payments={formData.otherPayments}
-                                            onChange={(payments) => setFormData(prev => ({ ...prev, otherPayments: payments }))}
-                                            showDescription={true}
-                                        />
-                                    </div>
-                                </div>
+                                </fieldset>
 
                                 <div className="pt-6 flex justify-end gap-3">
-                                    <Button type="button" variant="ghost" onClick={() => { setIsModalOpen(false); resetForm(); }}>Cancel</Button>
-                                    <Button type="submit" isLoading={formLoading}>
-                                        {editingStudent ? 'Update Student' : 'Create Student'}
+                                    <Button type="button" variant="ghost" onClick={() => { setIsModalOpen(false); resetForm(); }}>
+                                        {isViewOnly ? 'Close' : 'Cancel'}
                                     </Button>
+                                    {!isViewOnly && (
+                                        <Button type="submit" isLoading={formLoading}>
+                                            {editingStudent ? 'Update Student' : 'Create Student'}
+                                        </Button>
+                                    )}
                                 </div>
                             </form>
                         </motion.div>

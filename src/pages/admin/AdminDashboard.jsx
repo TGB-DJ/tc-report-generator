@@ -38,31 +38,8 @@ const AdminDashboard = () => {
             const studentsSnapshot = await getDocs(collection(db, "students"));
             const teachersSnapshot = await getDocs(collection(db, "teachers"));
             const adminsSnapshot = await getDocs(collection(db, "admins"));
+            // Migration logic removed for stability
 
-            // --- DATA MIGRATION FIX ---
-            // Check for HODs accidentally created in 'admins' collection
-            const migrationPromises = [];
-            adminsSnapshot.forEach(docSnap => {
-                const data = docSnap.data();
-                if (data.role === 'hod' || (data.role === 'teacher' && !teachersSnapshot.docs.find(t => t.id === docSnap.id))) {
-                    console.log('Migrating misplaced teacher/HOD:', data.email);
-                    // Move to teachers collection
-                    const movePromise = (async () => {
-                        await setDoc(doc(db, "teachers", docSnap.id), data);
-                        await deleteDoc(doc(db, "admins", docSnap.id));
-                    })();
-                    migrationPromises.push(movePromise);
-                }
-            });
-
-            if (migrationPromises.length > 0) {
-                await Promise.all(migrationPromises);
-                console.log(`Migrated ${migrationPromises.length} users to teachers collection.`);
-                // Refetch teachers after migration
-                const updatedTeachers = await getDocs(collection(db, "teachers"));
-                setStats(prev => ({ ...prev, teachers: updatedTeachers.size }));
-            }
-            // --------------------------
 
             let totalFees = 0;
             let collectedFees = 0;
@@ -82,7 +59,7 @@ const AdminDashboard = () => {
 
             setStats({
                 students: activeStudentCount,
-                teachers: teachersSnapshot.size + migrationPromises.length, // Approx update
+                teachers: teachersSnapshot.size,
                 totalFees,
                 collectedFees,
                 pendingFees: totalFees - collectedFees

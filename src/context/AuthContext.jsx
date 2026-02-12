@@ -24,6 +24,18 @@ export const AuthProvider = ({ children }) => {
         let unsubscribeFirestore = null;
         let loadingTimeout = null;
 
+        // GLOBAL SAFETY NET: Force loading to false after 8 seconds if nothing else does.
+        // This prevents the infinite "Loading Application..." screen if Firebase hangs.
+        const globalSafetyTimeout = setTimeout(() => {
+            setLoading((prevLoading) => {
+                if (prevLoading) {
+                    console.error('[AuthContext] Global safety timeout triggered. Forcing app to load.');
+                    return false;
+                }
+                return prevLoading;
+            });
+        }, 8000);
+
         const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
             console.log('[AuthContext] Auth state changed:', currentUser ? `User: ${currentUser.email}` : 'No user');
             setUser(currentUser);
@@ -65,26 +77,86 @@ export const AuthProvider = ({ children }) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
                         console.log('[AuthContext] User data:', data);
+                        console.log('[AuthContext] User data:', data);
                         setUserData(data);
+                        setLoading(false); // <--- CRITICAL FIX: Stop loading immediately on success
                     } else {
                         console.warn('[AuthContext] No user document found for UID:', currentUser.uid);
-                        setUserData(null);
-                    }
-                    setLoading(false);
-                }, (error) => {
-                    console.error("[AuthContext] Firestore Listener Error:", error);
 
-                    // Clear timeout on error
-                    if (loadingTimeout) {
-                        clearTimeout(loadingTimeout);
-                        loadingTimeout = null;
-                    }
+                        // --- SELF REPAIR MECHANISM ---
+                        // If user exists in Auth but not in 'users' collection, try to find them in role-specific collections and restore.
+                        const restoreUser = async () => {
+                            try {
+                                console.log('[AuthContext] Attempting to restore user profile...');
 
-                    setLoading(false);
-                    setUserData(null);
+                                // Safety Timeout for Restore operation
+                                const restorePromise = async () => {
+                                    let role = null;
+                                    let profileData = null;
+
+                                    // Check Students
+                                    const studentSnap = await getDoc(doc(db, "students", currentUser.uid));
+                                    if (studentSnap.exists()) {
+                                        role = 'student';
+                                        profileData = studentSnap.data();
+                                    } else {
+                                        // Check Teachers
+                                        const teacherSnap = await getDoc(doc(db, "teachers", currentUser.uid));
+                                        if (teacherSnap.exists()) {
+                                            role = teacherSnap.data().role === 'hod' ? 'hod' : 'teacher';
+                                            profileData = teacherSnap.data();
+                                        } else {
+                                            // Check Admins
+                                            const adminSnap = await getDoc(doc(db, "admins", currentUser.uid));
+                                            if (adminSnap.exists()) {
+                                                role = 'admin';
+                                                profileData = adminSnap.data();
+                                            }
+                                        }
+                                    }
+
+                                    if (role && profileData) {
+                                        console.log(`[AuthContext] Found user in ${role}s collection. Restoring 'users' record...`);
+                                        const restoredData = {
+                                            uid: currentUser.uid,
+                                            email: currentUser.email,
+                                            role: role,
+                                            phone: profileData.phone || "",
+                                            photoUrl: profileData.photoUrl || "",
+                                            name: profileData.name || "",
+                                            restoredAt: new Date().toISOString()
+                                        };
+
+                                        await setDoc(doc(db, "users", currentUser.uid), restoredData);
+                                        setUserData(restoredData);
+                                        console.log('[AuthContext] Restoration successful.');
+                                    } else {
+                                        console.error('[AuthContext] User not found in any collection. Cannot restore.');
+                                        setUserData(null);
+                                    }
+                                };
+
+                                // Race between restore and a 5s timeout
+                                await Promise.race([
+                                    restorePromise(),
+                                    new Promise((_, reject) => setTimeout(() => reject(new Error("Restore operation timed out")), 5000))
+                                ]);
+
+                            } catch (err) {
+                                console.error('[AuthContext] Restoration failed:', err);
+                                setUserData(null);
+                            } finally {
+                                console.log('[AuthContext] restoreUser finished. Setting loading false.');
+                                setLoading(false);
+                            }
+                        };
+
+                        restoreUser();
+                        // -----------------------------
+                    }
                 });
             } else {
-                console.log('[AuthContext] No user - clearing data');
+                // User is not logged in
                 setUserData(null);
                 setLoading(false);
             }
@@ -95,6 +167,7 @@ export const AuthProvider = ({ children }) => {
             unsubscribeAuth();
             if (unsubscribeFirestore) unsubscribeFirestore();
             if (loadingTimeout) clearTimeout(loadingTimeout);
+            clearTimeout(globalSafetyTimeout);
         };
     }, []);
 
@@ -110,7 +183,7 @@ export const AuthProvider = ({ children }) => {
             logoutTimer = setTimeout(() => {
                 alert("You have been logged out due to inactivity.");
                 logout();
-            }, 2 * 60 * 1000); // 2 minutes
+            }, 5 * 60 * 1000); // 5 minutes
         };
 
         const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
@@ -169,7 +242,6 @@ export const AuthProvider = ({ children }) => {
                 throw new Error("Access Denied. Your account has not been created by the Administrator.");
             }
 
-            return user;
             return user;
         } catch (error) {
             console.error("Google Login Error:", error);
@@ -264,6 +336,18 @@ export const AuthProvider = ({ children }) => {
                     <div className="flex flex-col items-center gap-4">
                         <div className="w-10 h-10 border-4 border-brand-orange border-t-transparent rounded-full animate-spin"></div>
                         <p className="text-slate-500 font-medium">Loading Application...</p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="text-xs text-blue-500 underline mt-4"
+                        >
+                            Taking too long? Reload
+                        </button>
+                        <button
+                            onClick={() => signOut(auth)}
+                            className="text-xs text-red-400 hover:text-red-600 underline"
+                        >
+                            Sign Out
+                        </button>
                     </div>
                 </div>
             ) : (

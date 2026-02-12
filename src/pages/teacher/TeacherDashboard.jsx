@@ -768,20 +768,60 @@ const TeacherDashboard = () => {
                                 {/* Fee Details */}
                                 <div>
                                     <h4 className="font-semibold text-brand-orange mb-3 border-b border-orange-100 pb-2">Fee Status</h4>
-                                    <div className="bg-slate-50 p-4 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-4 text-center mb-4">
-                                        <div>
-                                            <span className="text-slate-500 text-xs uppercase tracking-wider">Total Fees</span>
-                                            <p className="text-lg font-bold text-slate-800">₹{Number(viewingStudent.fees?.total || 0).toLocaleString()}</p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        {/* Tuition Fees */}
+                                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                            <h5 className="font-semibold text-blue-800 mb-2 text-sm">College / Tuition Fees</h5>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Total</span>
+                                                    <span className="font-medium">₹{Number(viewingStudent.fees?.total || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Paid</span>
+                                                    <span className="font-medium text-green-600">₹{Number(viewingStudent.fees?.paid || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between pt-1 border-t border-blue-200 mt-1">
+                                                    <span className="text-slate-600 font-medium">Balance</span>
+                                                    <span className={`font-bold ${Number(viewingStudent.fees?.balance || 0) > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                                                        ₹{Number(viewingStudent.fees?.balance || 0).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className="text-slate-500 text-xs uppercase tracking-wider">Paid</span>
-                                            <p className="text-lg font-bold text-green-600">₹{Number(viewingStudent.fees?.paid || 0).toLocaleString()}</p>
+
+                                        {/* Bus Fees */}
+                                        <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                                            <h5 className="font-semibold text-orange-800 mb-2 text-sm">Bus Fees</h5>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Total</span>
+                                                    <span className="font-medium">₹{Number(viewingStudent.fees?.busTotal || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-slate-500">Paid</span>
+                                                    <span className="font-medium text-green-600">₹{Number(viewingStudent.fees?.busPaid || 0).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between pt-1 border-t border-orange-200 mt-1">
+                                                    <span className="text-slate-600 font-medium">Balance</span>
+                                                    <span className={`font-bold ${Number(viewingStudent.fees?.busBalance || 0) > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                                                        ₹{Number(viewingStudent.fees?.busBalance || 0).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span className="text-slate-500 text-xs uppercase tracking-wider">Balance</span>
-                                            <p className={`text-lg font-bold ${Number(viewingStudent.fees?.balance || 0) > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                                                ₹{Number(viewingStudent.fees?.balance || 0).toLocaleString()}
-                                            </p>
+
+                                        {/* Other Fees - Full Width if needed or just listing */}
+                                        <div className="md:col-span-2 bg-purple-50 p-3 rounded-lg border border-purple-100 flex justify-between items-center text-sm">
+                                            <div>
+                                                <h5 className="font-semibold text-purple-800">Other Fees</h5>
+                                                <span className="text-xs text-slate-500">Lab, Exam, etc.</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-500 mr-2">Paid:</span>
+                                                <span className="font-bold text-purple-700">₹{Number(viewingStudent.fees?.otherPaid || 0).toLocaleString()}</span>
+                                            </div>
                                         </div>
                                     </div>
 

@@ -6,7 +6,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { User, FileText, CheckCircle, AlertCircle, Eye, Bell, X } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const StudentDashboard = () => {
     const { user } = useAuth();
@@ -94,6 +94,7 @@ const StudentDashboard = () => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [selectedSem, setSelectedSem] = useState('Current');
 
     const markAsRead = async (notification) => {
         if (notification.isRead) return;
@@ -107,7 +108,6 @@ const StudentDashboard = () => {
 
             // Update Firestore
             const userRef = doc(db, "users", user.uid);
-            // We use dot notation for updating map fields without overwriting
             await updateDoc(userRef, {
                 [`readEvents.${notification.id}`]: new Date().toISOString()
             });
@@ -136,11 +136,6 @@ const StudentDashboard = () => {
             console.error("Error clearing notification:", error);
         }
     };
-
-    if (loading) return <div className="p-10 text-center">Loading profile...</div>;
-    if (!student) return <div className="p-10 text-center">Student profile not found. Contact Admin.</div>;
-
-    const [selectedSem, setSelectedSem] = useState('Current');
 
     if (loading) return <div className="p-10 text-center">Loading profile...</div>;
     if (!student) return <div className="p-10 text-center">Student profile not found. Contact Admin.</div>;
@@ -307,28 +302,87 @@ const StudentDashboard = () => {
                     </div>
                     <div className="space-y-4">
                         <h3 className="text-xl font-bold border-t pt-4">Academic Profile</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <p className="text-slate-500">Register No</p>
-                                <p className="font-semibold">{student.regno}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Register No</p>
+                                <p className="font-semibold text-slate-800">{student.regno}</p>
                             </div>
-                            <div>
-                                <p className="text-slate-500">Admission No</p>
-                                <p className="font-semibold">{student.admissionNo || '-'}</p>
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Admission No</p>
+                                <p className="font-semibold text-slate-800">{student.admissionNo || '-'}</p>
                             </div>
-                            <div>
-                                <p className="text-slate-500">Gender</p>
-                                <p className="font-semibold">{student.gender || '-'}</p>
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Student Name</p>
+                                <p className="font-semibold text-slate-800">{student.name}</p>
                             </div>
-                            <div>
-                                <p className="text-slate-500">Semester</p>
-                                <p className="font-semibold text-brand-orange">Sem {student.semester || '1'}</p>
+
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Department</p>
+                                <p className="font-semibold text-slate-800">{student.dept}</p>
                             </div>
-                            <div>
-                                <p className="text-slate-500">Department</p>
-                                <p className="font-semibold">{student.dept}</p>
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Class / Semester</p>
+                                <p className="font-semibold text-brand-orange">{student.class} / Sem {student.semester || '1'}</p>
                             </div>
-                            {/* Shortened for brevity in replace */}
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Academic Year</p>
+                                <p className="font-semibold text-slate-800">{student.academicYear || '-'}</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Date of Birth</p>
+                                <p className="font-semibold text-slate-800">{student.dob || '-'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Gender</p>
+                                <p className="font-semibold text-slate-800">{student.gender || '-'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Religion / Community</p>
+                                <p className="font-semibold text-slate-800">{student.religion} / {student.community}</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Father / Guardian</p>
+                                <p className="font-semibold text-slate-800">{student.fatherName || '-'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Contact Phone</p>
+                                <p className="font-semibold text-slate-800">{student.phone || '-'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Email</p>
+                                <p className="font-semibold text-slate-800">{student.email || '-'}</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Aadhar No</p>
+                                <p className="font-semibold text-slate-800">{student.aadharNo || '-'}</p>
+                            </div>
+                            {student.panNo && (
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">PAN No</p>
+                                    <p className="font-semibold text-slate-800">{student.panNo}</p>
+                                </div>
+                            )}
+                            <div className="space-y-1">
+                                <p className="text-slate-500 text-xs uppercase tracking-wider">Admission Date</p>
+                                <p className="font-semibold text-slate-800">{student.admissionDate || '-'}</p>
+                            </div>
+
+                            {student.address && (
+                                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-1 pt-2 border-t border-slate-100 mt-2">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Address</p>
+                                    <p className="font-semibold text-slate-800">{student.address}</p>
+                                </div>
+                            )}
+
+                            {student.otherInfo && (
+                                <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-1 pt-2 border-t border-slate-100 mt-2">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Other Info / Remarks</p>
+                                    <p className="font-semibold text-slate-800">{student.otherInfo}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Card>
@@ -375,19 +429,68 @@ const StudentDashboard = () => {
                                 </div>
                             ) : (
                                 <>
-                                    <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                                        <span className="text-slate-600">Total Fees</span>
-                                        <span className="font-bold">₹{feeView.total}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                                        <span className="text-slate-600">Paid Amount</span>
-                                        <span className="font-bold text-green-600">₹{feeView.paid}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm">
-                                        <span className="text-slate-600">Balance Due</span>
-                                        <span className={`font-bold ${isClear ? "text-green-600" : "text-red-600"}`}>
-                                            ₹{feeView.balance}
-                                        </span>
+                                    {/* Detailed Breakdown */}
+                                    <div className="space-y-4">
+                                        {/* Tuition / College Fees */}
+                                        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                                            <h5 className="font-semibold text-blue-800 mb-2 text-sm">College / Tuition Fees</h5>
+                                            <div className="grid grid-cols-3 gap-2 text-sm">
+                                                <div>
+                                                    <p className="text-slate-500 text-xs">Total</p>
+                                                    <p className="font-medium text-slate-700">₹{Number(student.fees?.total || 0).toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-slate-500 text-xs">Paid</p>
+                                                    <p className="font-medium text-green-600">₹{Number(student.fees?.paid || 0).toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-slate-500 text-xs">Balance</p>
+                                                    <p className={`font-medium ${Number(student.fees?.balance || 0) > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                        ₹{Number(student.fees?.balance || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Bus Fees */}
+                                        <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
+                                            <h5 className="font-semibold text-orange-800 mb-2 text-sm">Bus Fees</h5>
+                                            <div className="grid grid-cols-3 gap-2 text-sm">
+                                                <div>
+                                                    <p className="text-slate-500 text-xs">Total</p>
+                                                    <p className="font-medium text-slate-700">₹{Number(student.fees?.busTotal || 0).toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-slate-500 text-xs">Paid</p>
+                                                    <p className="font-medium text-green-600">₹{Number(student.fees?.busPaid || 0).toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-slate-500 text-xs">Balance</p>
+                                                    <p className={`font-medium ${Number(student.fees?.busBalance || 0) > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                        ₹{Number(student.fees?.busBalance || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Other Fees */}
+                                        <div className="bg-purple-50/50 p-3 rounded-lg border border-purple-100">
+                                            <h5 className="font-semibold text-purple-800 mb-2 text-sm">Other Fees</h5>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-slate-600">Total Paid</span>
+                                                <span className="font-medium text-purple-700">₹{Number(student.fees?.otherPaid || 0).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Grand Total Summary */}
+                                        <div className="pt-2 border-t border-slate-200 mt-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-slate-700">Total Balance</span>
+                                                <span className={`font-bold text-lg ${isClear ? "text-green-600" : "text-red-600"}`}>
+                                                    ₹{(Number(student.fees?.balance || 0) + Number(student.fees?.busBalance || 0)).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                     {feeView.note && <p className="text-xs text-slate-500 mt-2">{feeView.note}</p>}
                                 </>
@@ -399,17 +502,7 @@ const StudentDashboard = () => {
                         </div>
                     )}
 
-                    {/* Action Button */}
-                    <div className="pt-4">
-                        <Button
-                            variant={isClear ? "primary" : "secondary"}
-                            className="w-full gap-2"
-                            onClick={() => navigate('/student/tc')}
-                        >
-                            <Eye size={18} />
-                            View TC Format
-                        </Button>
-                    </div>
+
 
                 </Card>
             </div >

@@ -27,11 +27,16 @@ const Select = ({ label, name, value, onChange, options, required, className = '
                         </optgroup>
                     ))
                 ) : (
-                    options?.map((option) => (
-                        <option key={option} value={option}>
-                            {option}
-                        </option>
-                    ))
+                    options?.map((option) => {
+                        const isObject = typeof option === 'object' && option !== null;
+                        const value = isObject ? option.value : option;
+                        const label = isObject ? option.label : option;
+                        return (
+                            <option key={value} value={value}>
+                                {label}
+                            </option>
+                        );
+                    })
                 )}
             </select>
         </div>
