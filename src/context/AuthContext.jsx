@@ -264,10 +264,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     // Function to create a user and storing their role (for Admin usage)
+    // Function to create a user and storing their role (for Admin usage)
     const createUser = async (email, password, role, additionalData = {}) => {
         // Dynamic import to avoid initial load weight and handle Secondary App
         const { initializeApp, getApps, getApp, deleteApp } = await import("firebase/app");
-        const { getAuth: getSecondaryAuth, createUserWithEmailAndPassword: createSecondaryUser, signOut: signOutSecondary } = await import("firebase/auth");
+        const { getAuth: getSecondaryAuth, createUserWithEmailAndPassword: createSecondaryUser, signOut: signOutSecondary, deleteUser } = await import("firebase/auth");
 
         const SECONDARY_APP_NAME = "secondaryApp";
         let secondaryApp;
@@ -287,9 +288,11 @@ export const AuthProvider = ({ children }) => {
         }
 
         const secondaryAuth = getSecondaryAuth(secondaryApp);
+        let newUser = null;
 
         try {
             const res = await createSecondaryUser(secondaryAuth, email, password);
+            newUser = res.user;
             const uid = res.user.uid;
 
             // Create user mapping in 'users' collection
@@ -297,7 +300,7 @@ export const AuthProvider = ({ children }) => {
                 uid,
                 email,
                 role,
-                phone: additionalData.phone || "", // Save phone for lookup
+                phone: additionalData.phone || "",
                 createdAt: new Date().toISOString()
             });
 
@@ -312,9 +315,21 @@ export const AuthProvider = ({ children }) => {
             });
 
             await signOutSecondary(secondaryAuth);
-            return uid;
+            return uid; // Return UID string directly
         } catch (error) {
             console.error("Error creating user:", error);
+
+            // ROLLBACK: If Firestore failed but Auth user was created, delete the Auth user
+            if (newUser) {
+                try {
+                    console.log("Rolling back: Deleting zombie user from Auth...");
+                    await deleteUser(newUser);
+                    console.log("Rollback successful.");
+                } catch (rollbackError) {
+                    console.error("CRITICAL: Failed to rollback (delete) user after Firestore error:", rollbackError);
+                }
+            }
+
             throw error;
         }
     };

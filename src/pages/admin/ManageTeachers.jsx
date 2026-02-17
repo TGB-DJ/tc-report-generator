@@ -130,11 +130,11 @@ const ManageTeachers = () => {
 
                 if (!passwordToUse) throw new Error("Password is required (or DOB for default).");
 
-                const userCred = await createUser(formData.email, passwordToUse, formData.isHod ? 'hod' : 'teacher', {
+                const uid = await createUser(formData.email, passwordToUse, formData.isHod ? 'hod' : 'teacher', {
                     ...teacherData,
                     password: passwordToUse // Store for admin visibility
                 });
-                docId = userCred.user.uid;
+                docId = uid;
                 alert("Teacher created successfully!");
             }
 
