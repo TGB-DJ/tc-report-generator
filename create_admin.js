@@ -1,3 +1,4 @@
+dhan
 // Script to create admin profile in Firestore
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';

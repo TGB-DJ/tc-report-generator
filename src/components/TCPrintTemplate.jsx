@@ -3,14 +3,13 @@ import PropTypes from 'prop-types';
 const TCPrintTemplate = ({ student, isLast = false }) => {
     // Generate folio number and admission number
     const folioNo = `${new Date().getFullYear()}${student.regno || '0000'}`;
-    const admissionNo = student.regno || 'N/A';
+    const admissionNo = student.admissionNo || 'N/A';
     const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '.');
 
     return (
         <div className={`tc-page ${!isLast ? 'tc-page-break' : ''}`}>
             <div
-                id="tc-content-border"
-                className="bg-white mx-auto p-12 border-2 border-blue-900"
+                className="tc-content-border bg-white mx-auto p-12 border-2 border-blue-900"
                 style={{
                     fontFamily: 'Times New Roman, serif',
                     maxWidth: '210mm',
@@ -23,14 +22,14 @@ const TCPrintTemplate = ({ student, isLast = false }) => {
                         {/* College Logo */}
                         <div className="w-24 h-24 flex-shrink-0">
                             <img
-                                src="/college-logo.png"
+                                src="/ksk-logo.jpg"
                                 alt="College Logo"
                                 className="w-full h-full object-contain"
                                 onError={(e) => { e.target.style.display = 'none'; }}
                             />
                         </div>
 
-                        <div className="flex-1 text-center">
+                        <div className="text-center">
                             <h1 className="text-3xl font-bold uppercase tracking-wide text-blue-900" style={{ letterSpacing: '1px' }}>
                                 KANCHI SHRI KRISHNA
                             </h1>
@@ -184,7 +183,6 @@ const TCPrintTemplate = ({ student, isLast = false }) => {
                             {/* Placeholder for Signature Image */}
                         </div>
                         <p className="font-bold border-t border-black pt-2 w-48 text-center mx-auto">PRINCIPAL</p>
-                        <p className="text-xs text-slate-500 uppercase">Kanchi Shri Krishna College of<br />Arts and Science</p>
                     </div>
                 </div>
             </div>

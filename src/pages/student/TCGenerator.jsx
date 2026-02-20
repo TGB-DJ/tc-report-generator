@@ -31,7 +31,7 @@ const TCGenerator = () => {
                     setTcData(prev => ({
                         ...prev,
                         folioNo: folioNo,
-                        admissionNo: data.regno || 'N/A'
+                        admissionNo: data.admissionNo || 'N/A'
                     }));
                 }
             } catch (error) {
@@ -59,10 +59,9 @@ const TCGenerator = () => {
             </div>
 
             {/* TC Document - Wrapper for Print Targeting */}
-            <div id="tc-print-container">
+            <div className="tc-print-container">
                 <div
-                    id="tc-content-border"
-                    className="bg-white mx-auto p-12 border-2 border-blue-900" // Simple solid border
+                    className="tc-content-border bg-white mx-auto p-12 border-2 border-blue-900" // Simple solid border
                     style={{
                         fontFamily: 'Times New Roman, serif',
                         fontFamily: 'Times New Roman, serif',

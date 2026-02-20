@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -52,13 +53,13 @@ const BulkTCPrintModal = ({ studentIds, onClose }) => {
         window.print();
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    return createPortal(
+        <div className="print-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto flex flex-col"
+                className="print-modal-content bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto flex flex-col"
             >
                 {/* Header - Hidden when printing */}
                 <div className="no-print p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
@@ -101,7 +102,7 @@ const BulkTCPrintModal = ({ studentIds, onClose }) => {
                     )}
 
                     {!loading && !error && students.length > 0 && (
-                        <div id="tc-print-container">
+                        <div className="tc-print-container">
                             {students.map((student, index) => (
                                 <TCPrintTemplate
                                     key={student.id}
@@ -113,7 +114,8 @@ const BulkTCPrintModal = ({ studentIds, onClose }) => {
                     )}
                 </div>
             </motion.div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
