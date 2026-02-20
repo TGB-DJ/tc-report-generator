@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, writeBatch, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -9,7 +9,7 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/Select';
 import FeePaymentInput from '../../components/FeePaymentInput';
 import Toast from '../../components/ui/Toast';
-import { Trash2, Plus, Filter, X, Pencil, Printer, Eye } from 'lucide-react';
+import { Trash2, Plus, Filter, X, Pencil, Printer, Eye, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DEPARTMENT_CATEGORIES, getYearOptions } from '../../constants/departments';
 import { RELIGIONS, COMMUNITIES } from '../../constants/studentData';
@@ -67,6 +67,52 @@ const ManageStudents = () => {
     // Fee Modal States
     const [isFeeModalOpen, setIsFeeModalOpen] = useState(false);
     const [bulkAmount, setBulkAmount] = useState({ tuition: '', bus: '' });
+
+    // --- DATA FETCHING & FILTERING ---
+
+    useEffect(() => {
+        fetchStudents();
+    }, []);
+
+    const fetchStudents = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, "students"));
+            const list = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setStudents(list);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching students:", error);
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        let result = students;
+
+        // 1. Status Filter
+        if (statusFilter === STUDENT_STATUS.CURRENT) {
+            result = result.filter(s => s.class !== 'Alumni');
+        } else {
+            result = result.filter(s => s.class === 'Alumni');
+        }
+
+        // 2. Department Filter
+        if (filters.dept) {
+            result = result.filter(s => s.dept === filters.dept);
+        }
+
+        // 3. Class Filter
+        if (filters.class) {
+            result = result.filter(s => s.class === filters.class);
+        }
+
+        // 4. Academic Year Filter
+        if (filters.academicYear) {
+            result = result.filter(s => s.academicYear === filters.academicYear);
+        }
+
+        setFilteredStudents(result);
+    }, [students, filters, statusFilter]);
 
     const resetForm = () => {
         setFormData({
@@ -161,6 +207,44 @@ const ManageStudents = () => {
     const handleFileChange = (e) => {
         if (e.target.files[0]) {
             setPhotoFile(e.target.files[0]);
+        }
+    };
+
+    // NEW: Fix Student Data Logic
+    const handleFixData = async () => {
+        if (!window.confirm("This will scan for students misplaced as admins. Continue?")) return;
+        setLoading(true);
+        try {
+            const studentsSnap = await getDocs(collection(db, "students"));
+            const adminsSnap = await getDocs(collection(db, "admins"));
+            // const usersSnap = await getDocs(collection(db, "users")); // Not needed if we don't fix users
+
+            let recoveredFromAdmins = 0;
+            // let createdMissingProfiles = 0;
+
+            // 1. Check Admins -> Students Migration
+            for (const docSnap of adminsSnap.docs) {
+                const data = docSnap.data();
+                if (data.role === 'student') {
+                    // Check if not already in students
+                    if (!studentsSnap.docs.find(s => s.id === docSnap.id)) {
+                        await setDoc(doc(db, "students", docSnap.id), data);
+                        await deleteDoc(doc(db, "admins", docSnap.id));
+                        recoveredFromAdmins++;
+                    }
+                }
+            }
+
+            // 2. REMOVED: Check Users -> Students Existence (per user request to avoid misleading profiles)
+
+            alert(`Fixed Data Report:\n- Recovered from Admins: ${recoveredFromAdmins}`);
+            fetchStudents();
+
+        } catch (error) {
+            console.error("Error fixing data:", error);
+            alert("Error fixing data: " + error.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -441,6 +525,9 @@ const ManageStudents = () => {
                             Print TC ({selectedStudents.length})
                         </Button>
                     )}
+                    <Button variant="outline" onClick={handleFixData}>
+                        <RefreshCw size={20} /> Fix Data
+                    </Button>
                     <Button onClick={() => { resetForm(); setIsModalOpen(true); }}>
                         <Plus size={20} /> Add Student
                     </Button>
