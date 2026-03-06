@@ -119,9 +119,12 @@ const AdminDashboard = () => {
                             <Users size={24} className="text-purple-500" />
                             <span className="text-sm">Manage Teachers</span>
                         </Button>
+                        <Button variant="outline" onClick={() => navigate('/admin/reports')} className="flex flex-col items-center p-4 h-auto gap-2 hover:bg-slate-50">
+                            <FileText size={24} className="text-orange-500" />
+                            <span className="text-sm">Reports</span>
+                        </Button>
                     </div>
                 </Card>
-                {/* Recent Activity or Charts could go here */}
             </div>
         </div>
     );

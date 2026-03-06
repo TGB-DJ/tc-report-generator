@@ -301,7 +301,13 @@ const StudentDashboard = () => {
                         </div>
                     </div>
                     <div className="space-y-4">
-                        <h3 className="text-xl font-bold border-t pt-4">Academic Profile</h3>
+                        <div className="flex justify-between items-center border-t pt-4">
+                            <h3 className="text-xl font-bold">Academic Profile</h3>
+                            <Button variant="outline" size="sm" onClick={() => navigate('/student/marks')}>
+                                <FileText size={16} className="mr-2" />
+                                University Marks
+                            </Button>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                             <div className="space-y-1">
                                 <p className="text-slate-500 text-xs uppercase tracking-wider">Register No</p>
@@ -383,6 +389,29 @@ const StudentDashboard = () => {
                                     <p className="font-semibold text-slate-800">{student.otherInfo}</p>
                                 </div>
                             )}
+
+                            {/* Extended Details Section */}
+                            <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 border-t border-slate-100 mt-2 bg-slate-50/50 p-4 rounded-lg">
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">ABC ID</p>
+                                    <p className="font-semibold text-slate-800">{student.abcId || '-'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">UMIS ID</p>
+                                    <p className="font-semibold text-slate-800">{student.umisId || '-'}</p>
+                                </div>
+                                {(student.bankName || student.accountNo) && (
+                                    <div className="space-y-1">
+                                        <p className="text-slate-500 text-xs uppercase tracking-wider">Bank Details</p>
+                                        <div className="font-semibold text-slate-800 text-sm">
+                                            <p>{student.bankName}</p>
+                                            <p>A/C: {student.accountNo}</p>
+                                            <p>IFSC: {student.ifscCode}</p>
+                                            <p>Branch: {student.branch}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </Card>
@@ -428,72 +457,112 @@ const StudentDashboard = () => {
                                     <p className="text-xs text-slate-500 mt-2">* Payment history is tracked globally. Check receipts for details.</p>
                                 </div>
                             ) : (
-                                <>
-                                    {/* Detailed Breakdown */}
+                                // Detailed Fee Breakdown (New Structure Support)
+                                (student.feesObj?.semester || student.fees?.semester) ? (
                                     <div className="space-y-4">
-                                        {/* Tuition / College Fees */}
+                                        {/* Registration */}
                                         <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-                                            <h5 className="font-semibold text-blue-800 mb-2 text-sm">College / Tuition Fees</h5>
-                                            <div className="grid grid-cols-3 gap-2 text-sm">
+                                            <div className="flex justify-between items-start mb-2">
                                                 <div>
-                                                    <p className="text-slate-500 text-xs">Total</p>
-                                                    <p className="font-medium text-slate-700">₹{Number(student.fees?.total || 0).toLocaleString()}</p>
+                                                    <h5 className="font-semibold text-blue-800 text-sm">Registration</h5>
+                                                    {(student.feesObj?.registration?.billNo || student.fees?.registration?.billNo) && (
+                                                        <p className="text-xs text-blue-600">
+                                                            Bill: {student.feesObj?.registration?.billNo || student.fees?.registration?.billNo}
+                                                            ({student.feesObj?.registration?.billDate || student.fees?.registration?.billDate})
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                <div>
-                                                    <p className="text-slate-500 text-xs">Paid</p>
-                                                    <p className="font-medium text-green-600">₹{Number(student.fees?.paid || 0).toLocaleString()}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-slate-500 text-xs">Balance</p>
-                                                    <p className={`font-medium ${Number(student.fees?.balance || 0) > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                                                        ₹{Number(student.fees?.balance || 0).toLocaleString()}
-                                                    </p>
-                                                </div>
+                                                <span className="text-xs font-bold text-blue-700">₹{student.feesObj?.registration?.total || student.fees?.registration?.total || 0}</span>
                                             </div>
                                         </div>
 
-                                        {/* Bus Fees */}
-                                        <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                                            <h5 className="font-semibold text-orange-800 mb-2 text-sm">Bus Fees</h5>
-                                            <div className="grid grid-cols-3 gap-2 text-sm">
-                                                <div>
-                                                    <p className="text-slate-500 text-xs">Total</p>
-                                                    <p className="font-medium text-slate-700">₹{Number(student.fees?.busTotal || 0).toLocaleString()}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-slate-500 text-xs">Paid</p>
-                                                    <p className="font-medium text-green-600">₹{Number(student.fees?.busPaid || 0).toLocaleString()}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-slate-500 text-xs">Balance</p>
-                                                    <p className={`font-medium ${Number(student.fees?.busBalance || 0) > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-                                                        ₹{Number(student.fees?.busBalance || 0).toLocaleString()}
-                                                    </p>
+                                        {/* Semesters */}
+                                        {Object.entries(student.feesObj?.semester || student.fees?.semester || {}).map(([sem, data]) => (
+                                            <div key={sem} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h5 className="font-semibold text-slate-800 text-sm">{sem}</h5>
+                                                        {data.billNo && (
+                                                            <p className="text-xs text-slate-500">Bill: {data.billNo} ({data.billDate})</p>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xs font-bold text-slate-700">₹{data.total}</p>
+                                                        <p className={`text-xs ${data.total - (data.payments?.reduce((s, p) => s + Number(p.amount), 0) || 0) > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                                            Bal: ₹{data.total - (data.payments?.reduce((s, p) => s + Number(p.amount), 0) || 0)}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        ))}
 
-                                        {/* Other Fees */}
-                                        <div className="bg-purple-50/50 p-3 rounded-lg border border-purple-100">
-                                            <h5 className="font-semibold text-purple-800 mb-2 text-sm">Other Fees</h5>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-slate-600">Total Paid</span>
-                                                <span className="font-medium text-purple-700">₹{Number(student.fees?.otherPaid || 0).toLocaleString()}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Grand Total Summary */}
-                                        <div className="pt-2 border-t border-slate-200 mt-2">
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-bold text-slate-700">Total Balance</span>
-                                                <span className={`font-bold text-lg ${isClear ? "text-green-600" : "text-red-600"}`}>
-                                                    ₹{(Number(student.fees?.balance || 0) + Number(student.fees?.busBalance || 0)).toLocaleString()}
-                                                </span>
-                                            </div>
+                                        <div className="pt-2 border-t border-slate-200 mt-2 flex justify-between items-center bg-slate-100 p-2 rounded">
+                                            <span className="font-bold text-slate-700">Total Due</span>
+                                            <span className={`font-bold text-lg ${student.fees?.balance > 0 ? "text-red-600" : "text-green-600"}`}>
+                                                ₹{student.fees?.balance?.toLocaleString()}
+                                            </span>
                                         </div>
                                     </div>
-                                    {feeView.note && <p className="text-xs text-slate-500 mt-2">{feeView.note}</p>}
-                                </>
+                                ) : (
+                                    <>
+                                        {/* Detailed Breakdown (Legacy) */}
+                                        <div className="space-y-4">
+                                            {/* Tuition / College Fees */}
+                                            <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                                                <h5 className="font-semibold text-blue-800 mb-2 text-sm">College / Tuition Fees</h5>
+                                                <div className="grid grid-cols-3 gap-2 text-sm">
+                                                    <div>
+                                                        <p className="text-slate-500 text-xs">Total</p>
+                                                        <p className="font-medium text-slate-700">₹{Number(student.fees?.total || 0).toLocaleString()}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-slate-500 text-xs">Paid</p>
+                                                        <p className="font-medium text-green-600">₹{Number(student.fees?.paid || 0).toLocaleString()}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-slate-500 text-xs">Balance</p>
+                                                        <p className={`font-medium ${Number(student.fees?.balance || 0) > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                            ₹{Number(student.fees?.balance || 0).toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Bus Fees */}
+                                            {Number(student.fees?.busTotal) > 0 && (
+                                                <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
+                                                    <h5 className="font-semibold text-orange-800 mb-2 text-sm">Bus Fees</h5>
+                                                    <div className="grid grid-cols-3 gap-2 text-sm">
+                                                        <div>
+                                                            <p className="text-slate-500 text-xs">Total</p>
+                                                            <p className="font-medium text-slate-700">₹{Number(student.fees?.busTotal || 0).toLocaleString()}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-slate-500 text-xs">Paid</p>
+                                                            <p className="font-medium text-green-600">₹{Number(student.fees?.busPaid || 0).toLocaleString()}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-slate-500 text-xs">Balance</p>
+                                                            <p className={`font-medium ${Number(student.fees?.busBalance || 0) > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                                ₹{Number(student.fees?.busBalance || 0).toLocaleString()}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Grand Total Summary */}
+                                            <div className="pt-2 border-t border-slate-200 mt-2">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-bold text-slate-700">Total Balance</span>
+                                                    <span className={`font-bold text-lg ${isClear ? "text-green-600" : "text-red-600"}`}>
+                                                        ₹{(Number(student.fees?.balance || 0) + Number(student.fees?.busBalance || 0)).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {feeView.note && <p className="text-xs text-slate-500 mt-2">{feeView.note}</p>}
+                                    </>
+                                )
                             )}
                         </div>
                     ) : (
@@ -501,12 +570,9 @@ const StudentDashboard = () => {
                             No fee records found for Semester {selectedSem}.
                         </div>
                     )}
-
-
-
                 </Card>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 };
 

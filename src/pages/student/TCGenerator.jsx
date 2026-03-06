@@ -64,7 +64,6 @@ const TCGenerator = () => {
                     className="tc-content-border bg-white mx-auto p-12 border-2 border-blue-900" // Simple solid border
                     style={{
                         fontFamily: 'Times New Roman, serif',
-                        fontFamily: 'Times New Roman, serif',
                         maxWidth: '210mm'
                     }}
                 >

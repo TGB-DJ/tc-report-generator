@@ -8,9 +8,11 @@ import ManageStudents from "./pages/admin/ManageStudents";
 import ManageTeachers from "./pages/admin/ManageTeachers";
 import ManageEvents from "./pages/admin/ManageEvents";
 import ManageAdmins from "./pages/admin/ManageAdmins";
+import Reports from "./pages/admin/Reports";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import TCGenerator from "./pages/student/TCGenerator";
+import UniversityMarkSheet from "./pages/student/UniversityMarkSheet";
 
 function App() {
   return (
@@ -32,6 +34,7 @@ function App() {
             <Route element={<Layout />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/admins" element={<ManageAdmins />} />
+              <Route path="/admin/reports" element={<Reports />} />
             </Route>
           </Route>
 
@@ -46,6 +49,7 @@ function App() {
             <Route element={<Layout />}>
               <Route path="/student" element={<StudentDashboard />} />
               <Route path="/student/tc" element={<TCGenerator />} />
+              <Route path="/student/marks" element={<UniversityMarkSheet />} />
               {/* Add other student routes here */}
             </Route>
           </Route>

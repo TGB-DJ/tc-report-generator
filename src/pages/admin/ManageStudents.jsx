@@ -7,6 +7,8 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/Select';
+import StudentFeesForm from '../../components/StudentFeesForm';
+import MonthlyTestForm from '../../components/MonthlyTestForm';
 import FeePaymentInput from '../../components/FeePaymentInput';
 import Toast from '../../components/ui/Toast';
 import { Trash2, Plus, Filter, X, Pencil, Printer, Eye, RefreshCw } from 'lucide-react';
@@ -14,6 +16,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DEPARTMENT_CATEGORIES, getYearOptions } from '../../constants/departments';
 import { RELIGIONS, COMMUNITIES } from '../../constants/studentData';
 import BulkTCPrintModal from '../../components/BulkTCPrintModal';
+import UniversityExamForm from '../../components/UniversityExamForm';
 
 const STUDENT_STATUS = {
     CURRENT: 'current',
@@ -53,11 +56,15 @@ const ManageStudents = () => {
 
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', name: '', email: '', phone: '', password: '',
-        regno: '', nmId: '', dept: '', class: '', semester: '',
+        regno: '', nmId: '', abcId: '', umisId: '', // Added IDs
+        dept: '', class: '', semester: '',
         fatherName: '', nationality: 'INDIAN', religion: '', community: '', gender: '', admissionNo: '', aadharNo: '', panNo: '', otherInfo: '',
         dob: '', admissionDate: '',
+        bankName: '', accountNo: '', ifscCode: '', branch: '', // Added Bank Details
         academicYear: '2025-2026', promotion: 'REFER MARK LIST', conduct: 'GOOD', leavingDate: '',
-        feePayments: [], busPayments: [], otherPayments: [], feesTotal: '', feesBusTotal: '', feesPaid: '', feesBus: ''
+        feePayments: [], busPayments: [], otherPayments: [], feesTotal: '', feesBusTotal: '', feesPaid: '', feesBus: '',
+        academicRecords: { universityExams: [], monthlyTests: {} },
+        feesObj: { registration: {}, semester: {} }
     });
 
     // Bulk Modal States
@@ -117,9 +124,11 @@ const ManageStudents = () => {
     const resetForm = () => {
         setFormData({
             firstName: '', lastName: '', name: '', email: '', phone: '', password: '',
-            regno: '', nmId: '', dept: '', class: '', semester: '',
+            regno: '', nmId: '', abcId: '', umisId: '',
+            dept: '', class: '', semester: '',
             fatherName: '', nationality: 'INDIAN', religion: '', community: '', gender: '', admissionNo: '', aadharNo: '', panNo: '', otherInfo: '',
             dob: '', admissionDate: '',
+            bankName: '', accountNo: '', ifscCode: '', branch: '',
             academicYear: '2025-2026', promotion: 'REFER MARK LIST', conduct: 'GOOD', leavingDate: '',
             feePayments: [], busPayments: [], otherPayments: [], feesTotal: '', feesBusTotal: '', feesPaid: '', feesBus: ''
         });
@@ -155,6 +164,8 @@ const ManageStudents = () => {
             password: student.password || '',
             regno: student.regno || '',
             nmId: student.nmId || '',
+            abcId: student.abcId || '',
+            umisId: student.umisId || '',
             dept: student.dept || '',
             class: student.class || '',
             semester: student.semester || '',
@@ -166,6 +177,10 @@ const ManageStudents = () => {
             admissionNo: student.admissionNo || '',
             aadharNo: student.aadharNo || '',
             panNo: student.panNo || '',
+            bankName: student.bankName || '',
+            accountNo: student.accountNo || '',
+            ifscCode: student.ifscCode || '',
+            branch: student.branch || '',
             otherInfo: student.otherInfo || '',
             dob: student.dob || '',
             admissionDate: student.admissionDate || '',
@@ -179,7 +194,9 @@ const ManageStudents = () => {
             feesTotal: student.fees?.total || '',
             feesBusTotal: student.fees?.busTotal || '',
             feesPaid: student.fees?.paid || '',
-            feesBus: student.fees?.busPaid || ''
+            feesBus: student.fees?.busPaid || '',
+            academicRecords: student.academicRecords || { universityExams: [], monthlyTests: {} },
+            feesObj: student.fees || { registration: {}, semester: {} }
         });
     };
 
@@ -257,9 +274,21 @@ const ManageStudents = () => {
             const fullName = `${formData.firstName} ${formData.lastName}`.trim();
 
             // Calculate Fees
-            const tuitionPaid = formData.feePayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-            const busPaid = formData.busPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-            const otherPaid = formData.otherPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+            const feesObj = formData.feesObj || {};
+
+            // Registration
+            const regTotal = Number(feesObj.registration?.total) || 0;
+            const regPaid = (feesObj.registration?.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+            // Semester
+            const semTotal = Object.values(feesObj.semester || {}).reduce((sum, sem) => sum + (Number(sem.total) || 0), 0);
+            const semPaid = Object.values(feesObj.semester || {}).reduce((sum, sem) => {
+                return sum + (sem.payments || []).reduce((pSum, p) => pSum + (Number(p.amount) || 0), 0);
+            }, 0);
+
+            const grandTotal = regTotal + semTotal;
+            const grandPaid = regPaid + semPaid;
+            const grandBalance = grandTotal - grandPaid;
 
             // Base Student Data
             let passwordToUse = formData.password;
@@ -276,6 +305,8 @@ const ManageStudents = () => {
                 phone: formData.phone,
                 regno: formData.regno,
                 nmId: formData.nmId,
+                abcId: formData.abcId,
+                umisId: formData.umisId,
                 dept: formData.dept,
                 class: formData.class,
                 semester: formData.semester,
@@ -287,6 +318,10 @@ const ManageStudents = () => {
                 admissionNo: formData.admissionNo,
                 aadharNo: formData.aadharNo,
                 panNo: formData.panNo,
+                bankName: formData.bankName,
+                accountNo: formData.accountNo,
+                ifscCode: formData.ifscCode,
+                branch: formData.branch,
                 otherInfo: formData.otherInfo,
                 dob: formData.dob,
                 admissionDate: formData.admissionDate,
@@ -295,17 +330,20 @@ const ManageStudents = () => {
                 conduct: formData.conduct,
                 leavingDate: formData.leavingDate,
                 fees: {
-                    total: Number(formData.feesTotal) || 0,
-                    paid: tuitionPaid,
-                    balance: (Number(formData.feesTotal) || 0) - tuitionPaid,
-                    busTotal: Number(formData.feesBusTotal) || 0,
-                    busPaid: busPaid,
-                    busBalance: (Number(formData.feesBusTotal) || 0) - busPaid,
-                    otherPaid: otherPaid,
-                    payments: formData.feePayments,
-                    busPayments: formData.busPayments,
-                    otherPayments: formData.otherPayments
+                    ...feesObj,
+                    total: grandTotal,
+                    paid: grandPaid,
+                    balance: grandBalance,
+                    // Keep old fields for safety if needed, or zero them
+                    busTotal: 0,
+                    busPaid: 0,
+                    busBalance: 0,
+                    otherPaid: 0,
+                    payments: [], // Flattened payments if needed? No, use structure.
+                    busPayments: [],
+                    otherPayments: []
                 },
+                academicRecords: formData.academicRecords, // Save Academic Records
                 password: passwordToUse // Store password for admin visibility
             };
 
@@ -805,6 +843,19 @@ const ManageStudents = () => {
                                         <div className="md:col-span-2">
                                             <Input name="otherInfo" label="Other Info" value={formData.otherInfo} onChange={handleInputChange} autoComplete="off" placeholder="Any other remarks..." />
                                         </div>
+
+                                        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-t border-slate-100 pt-4 mt-2">
+                                            <h5 className="md:col-span-2 lg:col-span-3 font-semibold text-slate-700">Extended Details</h5>
+                                            <Input name="abcId" label="ABC ID" value={formData.abcId} onChange={handleInputChange} autoComplete="off" />
+                                            <Input name="umisId" label="UMIS ID" value={formData.umisId} onChange={handleInputChange} autoComplete="off" />
+                                            <div className="hidden lg:block"></div>
+
+                                            <Input name="bankName" label="Bank Name" value={formData.bankName} onChange={handleInputChange} autoComplete="off" />
+                                            <Input name="accountNo" label="Account Number" value={formData.accountNo} onChange={handleInputChange} autoComplete="off" />
+                                            <Input name="ifscCode" label="IFSC Code" value={formData.ifscCode} onChange={handleInputChange} autoComplete="off" />
+                                            <Input name="branch" label="Branch" value={formData.branch} onChange={handleInputChange} autoComplete="off" />
+                                        </div>
+
                                         <Select
                                             name="dept"
                                             label="Department"
@@ -849,58 +900,30 @@ const ManageStudents = () => {
                                         <Input name="leavingDate" label="Leaving Date (Optional)" type="date" value={formData.leavingDate} onChange={handleInputChange} autoComplete="off" />
                                     </div>
 
-                                    <h4 className="font-semibold text-slate-700 pt-4">Fee Details</h4>
-                                    <div className="space-y-6">
-                                        {/* Tuition Fees */}
-                                        <div className="space-y-4 p-4 border border-blue-100 rounded-xl bg-blue-50/50">
-                                            <Input
-                                                name="feesTotal"
-                                                label="Total Tuition Fees (₹)"
-                                                type="number"
-                                                value={formData.feesTotal}
-                                                onChange={handleInputChange}
-                                                required
-                                                autoComplete="off"
-                                                placeholder="e.g., 30000"
-                                                className="bg-white"
-                                            />
-                                            <FeePaymentInput
-                                                title="Tuition Fee Payments"
-                                                payments={formData.feePayments}
-                                                onChange={(payments) => setFormData(prev => ({ ...prev, feePayments: payments }))}
-                                            />
-                                        </div>
+                                    <h4 className="font-semibold text-slate-700 pt-4">Academic Details</h4>
+                                    <UniversityExamForm
+                                        exams={formData.academicRecords?.universityExams || []}
+                                        onChange={(exams) => setFormData(prev => ({
+                                            ...prev,
+                                            academicRecords: { ...prev.academicRecords, universityExams: exams }
+                                        }))}
+                                    />
 
-                                        {/* Bus Fees */}
-                                        <div className="space-y-4 p-4 border border-orange-100 rounded-xl bg-orange-50/50">
-                                            <Input
-                                                name="feesBusTotal"
-                                                label="Total Bus Fees (₹)"
-                                                type="number"
-                                                value={formData.feesBusTotal}
-                                                onChange={handleInputChange}
-                                                autoComplete="off"
-                                                placeholder="e.g., 15000"
-                                                className="bg-white"
-                                            />
-                                            <FeePaymentInput
-                                                title="Bus Fee Payments"
-                                                payments={formData.busPayments}
-                                                onChange={(payments) => setFormData(prev => ({ ...prev, busPayments: payments }))}
-                                            />
-                                        </div>
-
-                                        {/* Other Fees */}
-                                        <div className="space-y-4 p-4 border border-purple-100 rounded-xl bg-purple-50/50">
-                                            <h5 className="font-medium text-purple-900">Other Fees (Lab, Exam, etc.)</h5>
-                                            <FeePaymentInput
-                                                title="Other Fee Payments"
-                                                payments={formData.otherPayments}
-                                                onChange={(payments) => setFormData(prev => ({ ...prev, otherPayments: payments }))}
-                                                showDescription={true}
-                                            />
-                                        </div>
+                                    <div className="mt-4">
+                                        <MonthlyTestForm
+                                            tests={formData.academicRecords?.monthlyTests || {}}
+                                            onChange={(tests) => setFormData(prev => ({
+                                                ...prev,
+                                                academicRecords: { ...prev.academicRecords, monthlyTests: tests }
+                                            }))}
+                                        />
                                     </div>
+
+                                    <h4 className="font-semibold text-slate-700 pt-4">Fee Details</h4>
+                                    <StudentFeesForm
+                                        fees={formData.feesObj || { registration: {}, semester: {} }}
+                                        onChange={(newFees) => setFormData(prev => ({ ...prev, feesObj: newFees }))}
+                                    />
                                 </fieldset>
 
                                 <div className="pt-6 flex justify-end gap-3">

@@ -87,7 +87,7 @@ async function seed() {
         name: "R. Kumar",
         regno: "CSA23001",
         dept: "Computer Science",
-        class: "III Year",
+        class: "3rd Year",
         phone: "7777777777",
         dob: "2003-05-15",
         admissionDate: "2023-06-01",
@@ -97,8 +97,60 @@ async function seed() {
             total: 45000,
             paid: 45000,
             balance: 0,
-            bus: 10000,
-            other: 5000
+            registration: {
+                total: 5000,
+                paid: 5000,
+                balance: 0,
+                billNo: "REG-23001",
+                billDate: "2023-06-01"
+            },
+            semester: {
+                "Sem 1": {
+                    total: 20000,
+                    paid: 20000,
+                    balance: 0,
+                    billNo: "SEM1-456",
+                    billDate: "2023-08-15"
+                },
+                "Sem 2": {
+                    total: 20000,
+                    paid: 20000,
+                    balance: 0,
+                    billNo: "SEM2-789",
+                    billDate: "2024-01-10"
+                }
+            }
+        },
+        academicRecords: {
+            universityExams: [
+                {
+                    semester: "1",
+                    examSession: "April-2025 - All UG Examination Results",
+                    results: [
+                        { subjectCode: "200L4E", ue: "060", ia: "025", total: "085", result: "PASS", remark: "" },
+                        { subjectCode: "200L4Z", ue: "058", ia: "025", total: "083", result: "PASS", remark: "" },
+                        { subjectCode: "200V4D", ue: "040", ia: "025", total: "065", result: "PASS", remark: "" },
+                        { subjectCode: "200V4Q", ue: "060", ia: "025", total: "085", result: "PASS", remark: "" },
+                        { subjectCode: "225C41", ue: "060", ia: "040", total: "100", result: "PASS", remark: "" },
+                        { subjectCode: "225C4A", ue: "062", ia: "025", total: "087", result: "PASS", remark: "" },
+                        { subjectCode: "225E4B", ue: "061", ia: "025", total: "086", result: "PASS", remark: "" },
+                        { subjectCode: "225S4A", ue: "067", ia: "025", total: "092", result: "PASS", remark: "" },
+                        { subjectCode: "NMU63", ue: "074", ia: "025", total: "099", result: "PASS", remark: "" }
+                    ]
+                }
+            ],
+            monthlyTests: {
+                "July 2025": {
+                    subjects: [
+                        { name: "Tamil", mark: 45, total: 50 },
+                        { name: "English", mark: 42, total: 50 },
+                        { name: "Maths", mark: 48, total: 50 }
+                    ],
+                    attendance: 22,
+                    totalDays: 24,
+                    attPercentage: 91.6
+                }
+            }
         }
     });
 
@@ -109,7 +161,7 @@ async function seed() {
         name: "Test Student 12256",
         regno: "12256",
         dept: "B.Sc CS",
-        class: "II Year",
+        class: "2nd Year",
         phone: "1234567890",
         dob: "2004-01-01",
         admissionDate: "2024-06-01",
