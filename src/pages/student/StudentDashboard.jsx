@@ -1,19 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { useNavigate } from 'react-router-dom';
-import { User, FileText, CheckCircle, AlertCircle, Eye, Bell, X, Share2, QrCode } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { User, FileText, CheckCircle, AlertCircle, Eye, Bell, X, Share2, QrCode, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 const StudentDashboard = () => {
     const { user } = useAuth();
     const [student, setStudent] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('profile');
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [selectedSem, setSelectedSem] = useState('Current');
+    const profileRef = useRef(null);
+    const idCardRef = useRef(null);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(location.search);
+        const tab = queryParams.get('tab');
+        if (tab) {
+            setActiveTab(tab);
+        }
+    }, [location.search]);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -92,11 +111,6 @@ const StudentDashboard = () => {
         fetchNotifications();
     }, [user]);
 
-    const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [isNotifOpen, setIsNotifOpen] = useState(false);
-    const [selectedSem, setSelectedSem] = useState('Current');
-
     const markAsRead = async (notification) => {
         if (notification.isRead) return;
 
@@ -135,6 +149,54 @@ const StudentDashboard = () => {
 
         } catch (error) {
             console.error("Error clearing notification:", error);
+        }
+    };
+
+    const downloadIdCardImage = async () => {
+        if (!idCardRef.current) return;
+        setIsDownloading(true);
+        try {
+            const canvas = await html2canvas(idCardRef.current, {
+                scale: 3, // High quality
+                backgroundColor: null,
+                useCORS: true
+            });
+            const image = canvas.toDataURL('image/png', 1.0);
+            const link = document.createElement('a');
+            link.download = `${student.regno}_ID_Card.png`;
+            link.href = image;
+            link.click();
+        } catch (error) {
+            console.error('Error generating image:', error);
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    const downloadIdCardPdf = async () => {
+        if (!idCardRef.current) return;
+        setIsDownloading(true);
+        try {
+            const canvas = await html2canvas(idCardRef.current, {
+                scale: 3,
+                backgroundColor: null,
+                useCORS: true
+            });
+            const imgData = canvas.toDataURL('image/png', 1.0);
+            
+            // Calculate dimensions to maintain aspect ratio in PDF
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const margin = 20;
+            const targetWidth = 90; // Standard ID width is roughly 54x86mm
+            const targetHeight = (canvas.height * targetWidth) / canvas.width;
+
+            pdf.addImage(imgData, 'PNG', (pdfWidth - targetWidth) / 2, margin, targetWidth, targetHeight);
+            pdf.save(`${student.regno}_ID_Card.pdf`);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -193,11 +255,21 @@ const StudentDashboard = () => {
 
     const feeView = getFeeDisplay();
 
+    const getTabTitle = () => {
+        switch(activeTab) {
+            case 'profile': return 'Profile';
+            case 'academic': return 'Academic';
+            case 'fees': return 'Fees';
+            case 'share': return 'Share ID';
+            default: return 'Student Dashboard';
+        }
+    };
+
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+        <div className="space-y-6 relative">
+            <div className="flex justify-between items-center p-4 rounded-xl shadow-sm border border-slate-200 dark:border-white/10 dark:bg-[#0a0a0a]">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Student Dashboard</h1>
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{getTabTitle()}</h1>
                     <p className="text-slate-500 text-sm">Welcome, {student.name}</p>
                 </div>
 
@@ -221,11 +293,11 @@ const StudentDashboard = () => {
                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
+                                className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl shadow-2xl border z-50 overflow-hidden bg-white dark:bg-[#0a0a0a] border-slate-100 dark:border-white/10"
                             >
-                                <div className="p-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                                    <h3 className="font-bold text-slate-700">Notifications</h3>
-                                    <button onClick={() => setIsNotifOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <div className="p-4 flex justify-between items-center border-b border-slate-50 dark:border-white/10 bg-slate-50/50 dark:bg-[#111111]">
+                                    <h3 className="font-bold text-slate-700 dark:text-white">Notifications</h3>
+                                    <button onClick={() => setIsNotifOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
                                         <X size={18} />
                                     </button>
                                 </div>
@@ -243,7 +315,7 @@ const StudentDashboard = () => {
                                                 <div
                                                     key={notif.id}
                                                     onClick={() => markAsRead(notif)}
-                                                    className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
+                                                    className={`p-4 hover:bg-slate-50 dark:hover:bg-[#1a1a1a] transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
                                                 >
                                                     <div className="flex justify-between items-start gap-3">
                                                         <div className="flex-1">
@@ -279,14 +351,17 @@ const StudentDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Profile Card */}
-                <Card className="md:col-span-2 relative overflow-hidden">
+                <Card className="md:col-span-2 relative overflow-hidden" ref={profileRef}>
                     <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between mb-8 gap-6 pt-4 sm:pt-0">
                         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 w-full">
                             {/* QR Code Pass */}
                             <div className="flex-shrink-0 relative group flex flex-col items-center">
-                                <div className="w-32 h-32 bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-md flex items-center justify-center relative z-10 transition-transform hover:scale-105 duration-300">
+                                <div 
+                                    className="w-32 h-32 bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-md flex items-center justify-center relative z-10 transition-transform hover:scale-105 duration-300 cursor-pointer"
+                                    onClick={() => setIsQrModalOpen(true)}
+                                >
                                     <img 
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(student.regno)}`}
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/id/${student.regno}`)}`}
                                         alt="Student Pass QR" 
                                         className="w-full h-full object-contain"
                                         loading="lazy"
@@ -324,29 +399,15 @@ const StudentDashboard = () => {
                                         )}
                                     </div>
 
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-8 text-xs font-semibold px-4 hover:bg-slate-50 shadow-sm"
-                                        onClick={async () => {
-                                            try {
-                                                if (navigator.share) {
-                                                    await navigator.share({
-                                                        title: `${student.name}'s Student Profile`,
-                                                        text: `Student Profile: ${student.name}\nReg No: ${student.regno}\nCourse: ${student.class} - ${student.dept}`,
-                                                        url: window.location.href,
-                                                    });
-                                                } else {
-                                                    alert("Sharing is not supported on this browser or device.");
-                                                }
-                                            } catch (error) {
-                                                console.log("Error sharing:", error);
-                                            }
-                                        }}
-                                    >
-                                        <Share2 size={14} className="mr-1.5" />
-                                        Share Profile
-                                    </Button>
+                                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100 dark:border-white/10 w-full justify-center sm:justify-start">
+                                        <Button 
+                                            onClick={() => navigate('?tab=share')} 
+                                            className="flex-1 sm:flex-none"
+                                        >
+                                            <Share2 size={16} className="mr-2" />
+                                            Share / Generate ID
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -354,28 +415,46 @@ const StudentDashboard = () => {
                 </Card>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-6 border-b border-slate-200 mb-6 overflow-x-auto no-scrollbar">
-                {['Profile', 'Academic', 'Fees'].map(tab => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab.toLowerCase())}
-                        className={`pb-3 px-2 transition-all relative whitespace-nowrap text-sm font-semibold ${
-                            activeTab === tab.toLowerCase()
-                                ? 'text-brand-blue'
-                                : 'text-slate-500 hover:text-slate-700'
-                        }`}
+            {/* QR Modal */}
+            <AnimatePresence>
+                {isQrModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsQrModalOpen(false)}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
                     >
-                        {tab}
-                        {activeTab === tab.toLowerCase() && (
-                            <motion.div
-                                layoutId="activeTabIndicator"
-                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-blue rounded-t-full"
-                            />
-                        )}
-                    </button>
-                ))}
-            </div>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white p-6 rounded-2xl shadow-2xl relative max-w-sm w-full flex flex-col items-center"
+                        >
+                            <button
+                                onClick={() => setIsQrModalOpen(false)}
+                                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                            <h3 className="text-xl font-bold text-slate-800 mb-6">Scan QR Code</h3>
+                            <div className="w-64 h-64 bg-white p-2 rounded-xl border-2 border-slate-100 shadow-inner mb-6">
+                                <img 
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${window.location.origin}/id/${student.regno}`)}`}
+                                    alt="Student Pass QR (Large)" 
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                            <p className="text-sm text-slate-500 text-center px-4">
+                                Contains emergency contact details and student identification.
+                            </p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Tabs removed as requested */}
 
             <AnimatePresence mode="wait">
                 {activeTab === 'profile' && (
@@ -472,7 +551,7 @@ const StudentDashboard = () => {
 
                             {/* Additional Information Section */}
                             {(student.abcId || student.umisId || student.bankName || student.accountNo) && (
-                                <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 border-t border-slate-100 mt-2 bg-slate-50/50 p-4 rounded-lg">
+                                <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-slate-200 dark:border-white/10 mt-2 p-4 rounded-lg">
                                     {student.abcId && (
                                         <div className="space-y-1">
                                             <p className="text-slate-500 text-xs uppercase tracking-wider">ABC ID</p>
@@ -711,6 +790,125 @@ const StudentDashboard = () => {
                             No fee records found for Semester {selectedSem}.
                         </div>
                     )}
+                        </Card>
+                    </motion.div>
+                )}
+                {activeTab === 'share' && (
+                    <motion.div
+                        key="share"
+                        initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -10, filter: "blur(8px)" }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <Card className="p-6 space-y-6 flex flex-col items-center">
+                            <div className="flex flex-col sm:flex-row justify-between items-center w-full border-b border-slate-100 pb-4 gap-4">
+                                <div className="text-center sm:text-left">
+                                    <h3 className="text-xl font-bold">Digital ID Card</h3>
+                                    <p className="text-slate-500 text-sm">Download or share your student ID.</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={downloadIdCardImage}
+                                        isLoading={isDownloading}
+                                    >
+                                        <Download size={16} className="mr-2" /> Save Image
+                                    </Button>
+                                    <Button 
+                                        variant="primary" 
+                                        size="sm" 
+                                        onClick={downloadIdCardPdf}
+                                        isLoading={isDownloading}
+                                    >
+                                        <FileText size={16} className="mr-2" /> Save PDF
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* ID Card Template */}
+                            <div className="flex justify-center w-full p-4 overflow-hidden">
+                                <div 
+                                    ref={idCardRef}
+                                    className="w-[340px] bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden relative"
+                                >
+                                    {/* Top Header */}
+                                    <div className="bg-brand-blue p-4 flex items-center justify-center gap-3 relative overflow-hidden">
+                                        <img src="/ksk-logo.jpg" alt="Logo" className="w-12 h-12 object-contain bg-white p-1 rounded-full relative z-10" />
+                                        <div className="relative z-10 text-white text-center">
+                                            <h4 className="font-bold text-[13px] leading-tight">KANCHI SHRI KRISHNA</h4>
+                                            <p className="text-[9px] font-medium opacity-90 tracking-wide">COLLEGE OF ARTS AND SCIENCE</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Profile & QR Section */}
+                                    <div className="flex flex-col p-6 relative bg-white">
+                                        <div className="flex justify-between items-start w-full -mt-10 mb-4 relative z-20">
+                                            {/* Profile Image */}
+                                            <div className="w-24 h-28 rounded-md border-4 border-white shadow-lg overflow-hidden bg-slate-100">
+                                                {student.photoUrl ? (
+                                                    <img src={student.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-brand-blue bg-blue-50">
+                                                        {student.name?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* QR Code */}
+                                            <div className="w-24 h-24 bg-white p-1.5 rounded-md border-2 border-white shadow-lg mt-2 flex items-center justify-center overflow-hidden">
+                                                <img 
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${window.location.origin}/id/${student.regno}`)}`}
+                                                    alt="QR" 
+                                                    className="w-full h-full object-contain"
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        <h2 className="text-xl font-extrabold text-slate-800 uppercase tracking-wide leading-tight mb-1">{student.name}</h2>
+                                        <div className="bg-blue-50 px-3 py-1.5 rounded-xl inline-flex flex-col self-start mb-4 border border-blue-100/50">
+                                            <span className="text-brand-blue font-bold text-[11px] tracking-wide leading-tight">
+                                                {student.dept}
+                                            </span>
+                                            <span className="text-brand-blue/80 font-bold text-[9px] tracking-wider mt-0.5 uppercase">
+                                                {student.year || '1st Year'} • {student.batch || '2026-2028'} Batch
+                                            </span>
+                                        </div>
+
+                                        <div className="w-full space-y-2.5 text-[13px]">
+                                            <div className="flex justify-between border-b border-slate-50 pb-1.5">
+                                                <span className="text-slate-500 font-medium">Reg No</span>
+                                                <span className="font-bold text-slate-800 tracking-wide">{student.regno}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-50 pb-1.5">
+                                                <span className="text-slate-500 font-medium">DOB</span>
+                                                <span className="font-bold text-slate-800">{student.dob || '-'}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-50 pb-1.5">
+                                                <span className="text-slate-500 font-medium">Blood Group</span>
+                                                <span className="font-bold text-red-600">{student.bloodGroup || '-'}</span>
+                                            </div>
+                                            <div className="flex justify-between border-b border-slate-50 pb-1.5">
+                                                <span className="text-slate-500 font-medium">Phone No</span>
+                                                <span className="font-bold text-slate-800">{student.phone || student.fatherName || '-'}</span>
+                                            </div>
+                                            <div className="flex justify-between pb-1 pt-1 text-[11px]">
+                                                <span className="text-slate-500 font-medium whitespace-nowrap mr-3">Address</span>
+                                                <span className="font-bold text-slate-800 text-right line-clamp-2 leading-tight">{student.address || student.city || 'Kanchipuram, Tamil Nadu'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Bottom / Signature */}
+                                    <div className="bg-slate-50 p-3 border-t border-slate-100 flex items-center justify-end">
+                                        <div className="text-right">
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2">Authorized Signatory</p>
+                                            <div className="w-20 h-[1px] bg-slate-300 ml-auto"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </Card>
                     </motion.div>
                 )}

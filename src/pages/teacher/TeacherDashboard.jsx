@@ -382,11 +382,11 @@ const TeacherDashboard = () => {
                                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
+                                    className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl shadow-2xl border z-50 overflow-hidden bg-white dark:bg-[#0a0a0a] border-slate-100 dark:border-white/10"
                                 >
-                                    <div className="p-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                                        <h3 className="font-bold text-slate-700">Notifications</h3>
-                                        <button onClick={() => setIsNotifOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                    <div className="p-4 flex justify-between items-center border-b border-slate-50 dark:border-white/10 bg-slate-50/50 dark:bg-[#111111]">
+                                        <h3 className="font-bold text-slate-700 dark:text-white">Notifications</h3>
+                                        <button onClick={() => setIsNotifOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
                                             <X size={18} />
                                         </button>
                                     </div>
@@ -404,7 +404,7 @@ const TeacherDashboard = () => {
                                                     <div
                                                         key={notif.id}
                                                         onClick={() => markAsRead(notif)}
-                                                        className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
+                                                        className={`p-4 hover:bg-slate-50 dark:hover:bg-[#1a1a1a] transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
                                                     >
                                                         <div className="flex justify-between items-start gap-3">
                                                             <div className="flex-1">

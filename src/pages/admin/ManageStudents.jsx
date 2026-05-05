@@ -870,7 +870,7 @@ const ManageStudents = () => {
                                             <div className="flex-shrink-0 relative group flex flex-col items-center pl-4 border-l border-slate-100">
                                                 <div className="w-24 h-24 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                                                     <img 
-                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(editingStudent.regno)}`}
+                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${window.location.origin}/id/${editingStudent.regno}`)}`}
                                                         alt="Student Pass QR" 
                                                         className="w-full h-full object-contain"
                                                     />

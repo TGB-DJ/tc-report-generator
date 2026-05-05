@@ -16,6 +16,7 @@ import TCGenerator from "./pages/student/TCGenerator";
 import UniversityMarkSheet from "./pages/student/UniversityMarkSheet";
 import AttendanceMarker from "./pages/teacher/AttendanceMarker";
 import GlobalErrorBoundary from "./components/GlobalErrorBoundary";
+import VerifyIDCard from "./pages/VerifyIDCard";
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
               </Route>
             </Route>
 
+            <Route path="/id/:regno" element={<VerifyIDCard />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

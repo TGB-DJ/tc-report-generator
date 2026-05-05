@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, X, Home, Users, GraduationCap, FileText, Settings, ClipboardCheck, Sun, Moon, Bell } from 'lucide-react';
+import { LogOut, Menu, X, Home, Users, GraduationCap, FileText, Settings, ClipboardCheck, Sun, Moon, Bell, User, BookOpen, CreditCard, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 
 const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed }) => {
     const location = useLocation();
     // Exact match for dashboard routes, startsWith for others
-    const isDashboard = to === '/admin' || to === '/student' || to === '/teacher';
-    const isActive = isDashboard
-        ? location.pathname === to
-        : location.pathname.startsWith(to);
+    const isDashboard = to === '/admin' || to.startsWith('/student') || to === '/teacher';
+    const isActive = isDashboard && to.startsWith('/student') 
+        ? location.pathname === '/student' && (location.search === to.replace('/student', '') || (!location.search && to === '/student?tab=profile'))
+        : isDashboard
+            ? location.pathname === to
+            : location.pathname.startsWith(to);
 
     return (
         <Link
@@ -114,7 +116,10 @@ const Layout = () => {
             case 'student':
                 return (
                     <>
-                        <SidebarLink to="/student" icon={Home} label="Dashboard" {...commonProps} />
+                        <SidebarLink to="/student?tab=profile" icon={User} label="Profile" {...commonProps} />
+                        <SidebarLink to="/student?tab=academic" icon={BookOpen} label="Academic" {...commonProps} />
+                        <SidebarLink to="/student?tab=fees" icon={CreditCard} label="Fees" {...commonProps} />
+                        <SidebarLink to="/student?tab=share" icon={Share2} label="Share ID" {...commonProps} />
                     </>
                 );
             default:
