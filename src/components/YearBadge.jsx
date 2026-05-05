@@ -12,7 +12,7 @@ const YearBadge = ({ year, role }) => {
         if (role === 'staff' || role === 'teacher') {
             return {
                 label: 'STAFF',
-                className: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xl',
+                className: 'bg-gradient-to-r from-amber-500 to-blue-500 text-white shadow-xl',
                 glow: 'shadow-[0_0_15px_rgba(245,158,11,0.7)]',
                 animation: ''
             };

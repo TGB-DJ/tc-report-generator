@@ -89,7 +89,7 @@ const BulkTCPrintModal = ({ studentIds, onClose }) => {
                 <div className="p-6">
                     {loading && (
                         <div className="flex flex-col items-center justify-center py-20">
-                            <Loader className="animate-spin text-brand-orange mb-4" size={48} />
+                            <Loader className="animate-spin text-brand-blue mb-4" size={48} />
                             <p className="text-slate-600">Loading student data...</p>
                         </div>
                     )}

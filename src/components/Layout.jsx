@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, X, Home, Users, GraduationCap, FileText, Settings } from 'lucide-react';
+import { LogOut, Menu, X, Home, Users, GraduationCap, FileText, Settings, ClipboardCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
-import GlowingLogo from './ui/GlowingLogo';
-
 
 const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed }) => {
     const location = useLocation();
@@ -23,12 +21,12 @@ const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed }) => {
                 "flex items-center gap-3 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden",
                 isCollapsed ? "justify-center px-2" : "px-4",
                 isActive
-                    ? "bg-brand-orange text-white shadow-lg shadow-orange-500/30"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-brand-orange"
+                    ? "bg-brand-blue text-white shadow-lg shadow-blue-500/30"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-brand-blue"
             )}
             title={isCollapsed ? label : ""}
         >
-            <Icon size={20} className={clsx("relative z-10 flex-shrink-0", isActive ? "text-white" : "text-slate-500 group-hover:text-brand-orange")} />
+            <Icon size={20} className={clsx("relative z-10 flex-shrink-0", isActive ? "text-white" : "text-slate-500 group-hover:text-brand-blue")} />
             {!isCollapsed && (
                 <motion.span
                     initial={{ opacity: 0, width: 0 }}
@@ -43,7 +41,7 @@ const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed }) => {
             {isActive && (
                 <motion.div
                     layoutId="sidebar-active"
-                    className="absolute inset-0 bg-brand-orange z-0"
+                    className="absolute inset-0 bg-brand-blue z-0"
                     initial={false}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
@@ -80,6 +78,7 @@ const Layout = () => {
                 return (
                     <>
                         <SidebarLink to="/teacher" icon={Home} label="Dashboard" {...commonProps} />
+                        <SidebarLink to="/teacher/attendance" icon={ClipboardCheck} label="Attendance" {...commonProps} />
                         <SidebarLink to="/admin/students" icon={GraduationCap} label="Students" {...commonProps} />
                         <SidebarLink to="/admin/teachers" icon={Users} label="Teachers" {...commonProps} />
                         <SidebarLink to="/admin/events" icon={FileText} label="Events" {...commonProps} />
@@ -87,7 +86,10 @@ const Layout = () => {
                 );
             case 'teacher':
                 return (
-                    <SidebarLink to="/teacher" icon={Home} label="Dashboard" {...commonProps} />
+                    <>
+                        <SidebarLink to="/teacher" icon={Home} label="Dashboard" {...commonProps} />
+                        <SidebarLink to="/teacher/attendance" icon={ClipboardCheck} label="Attendance" {...commonProps} />
+                    </>
                 );
 
             case 'student':
@@ -134,7 +136,7 @@ const Layout = () => {
                         <div className="flex flex-col gap-3 mb-10">
                             <div className={clsx("flex items-center transition-all duration-300", isSidebarCollapsed ? "justify-center" : "gap-3 px-2")}>
                                 <div className="flex-shrink-0">
-                                    <GlowingLogo text="KKC" />
+                                    <img src="/ksk-logo.jpg" alt="College Logo" className="w-10 h-10 object-contain rounded-md" />
                                 </div>
                                 <AnimatePresence>
                                     {!isSidebarCollapsed && (
@@ -145,7 +147,7 @@ const Layout = () => {
                                             className="flex-1 min-w-0 overflow-hidden whitespace-nowrap"
                                         >
                                             <h1 className="font-bold text-slate-900 truncate">KSK College</h1>
-                                            <p className="text-xs text-slate-500 truncate">PWA System</p>
+                                            <p className="text-xs text-slate-500 truncate">MANAGEMENT</p>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -167,7 +169,7 @@ const Layout = () => {
                                     >
                                         <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Powered By</p>
                                         <div className="flex items-center justify-center gap-1.5">
-                                            <span className="w-2 h-2 rounded-full bg-brand-orange"></span>
+                                            <span className="w-2 h-2 rounded-full bg-brand-blue"></span>
                                             <p className="text-xs font-bold text-slate-700">CJ Productions</p>
                                         </div>
                                     </motion.div>
@@ -177,7 +179,7 @@ const Layout = () => {
                                         animate={{ opacity: 1 }}
                                         className="mb-4 flex justify-center"
                                     >
-                                        <span className="w-2 h-2 rounded-full bg-brand-orange" title="Powered by CJ Productions"></span>
+                                        <span className="w-2 h-2 rounded-full bg-brand-blue" title="Powered by CJ Productions"></span>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -214,10 +216,10 @@ const Layout = () => {
                 <header className="h-16 border-b border-slate-200 bg-white/50 backdrop-blur-md flex items-center justify-between px-6 lg:px-8">
                     {isTeacherLayout ? (
                         <div className="flex items-center gap-3">
-                            <GlowingLogo text="KKC" />
+                            <img src="/ksk-logo.jpg" alt="College Logo" className="w-10 h-10 object-contain rounded-md" />
                             <div>
                                 <h1 className="font-bold text-slate-900 leading-tight">KSK College</h1>
-                                <p className="text-[10px] text-slate-500">PWA System</p>
+                                <p className="text-[10px] text-slate-500">MANAGEMENT</p>
                             </div>
                         </div>
                     ) : (
@@ -240,7 +242,7 @@ const Layout = () => {
                             <p className="text-sm font-medium text-slate-900">{userData?.email}</p>
                             <p className="text-xs text-slate-500 capitalize">{userData?.role}</p>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-orange to-red-500 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-orange-500/20 overflow-hidden">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-blue to-red-500 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-blue-500/20 overflow-hidden">
                             {userData?.photoUrl ? (
                                 <img src={userData.photoUrl} alt="Profile" className="w-full h-full object-cover" />
                             ) : (

@@ -34,7 +34,7 @@ const UniversityMarkSheet = () => {
     }, [currentUser]);
 
     if (loading) {
-        return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-brand-orange" size={40} /></div>;
+        return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-brand-blue" size={40} /></div>;
     }
 
     if (!studentData || !studentData.academicRecords?.universityExams) {

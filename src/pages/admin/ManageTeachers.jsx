@@ -16,6 +16,7 @@ const ManageTeachers = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTeacher, setEditingTeacher] = useState(null);
+    const [filterDept, setFilterDept] = useState('All');
     const [photoFile, setPhotoFile] = useState(null); // NEW: File state
     const { createUser } = useAuth();
 
@@ -83,6 +84,13 @@ const ManageTeachers = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Form Validation for required fields
+        if (!formData.name || !formData.email || !formData.phone || !formData.dept || !formData.gender) {
+            setFormError('Please fill in all required fields (Name, Email, Phone, Department, Gender).');
+            return;
+        }
+
         setFormLoading(true);
         setFormError('');
 
@@ -177,11 +185,25 @@ const ManageTeachers = () => {
         }
     };
 
+    const filteredTeachers = filterDept === 'All' 
+        ? teachers 
+        : teachers.filter(t => t.dept === filterDept);
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-slate-800">Manage Teachers</h2>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                    <select
+                        value={filterDept}
+                        onChange={(e) => setFilterDept(e.target.value)}
+                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:border-brand-blue outline-none"
+                    >
+                        <option value="All">All Departments</option>
+                        {TEACHER_DEPARTMENTS.map(dept => (
+                            <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                    </select>
                     <Button variant="outline" onClick={async () => {
                         if (!window.confirm("This will fix invisible teachers. Continue?")) return;
                         setLoading(true);
@@ -238,10 +260,10 @@ const ManageTeachers = () => {
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="5" className="p-8 text-center">Loading...</td></tr>
-                            ) : teachers.length === 0 ? (
+                            ) : filteredTeachers.length === 0 ? (
                                 <tr><td colSpan="5" className="p-8 text-center text-slate-500">No teachers found.</td></tr>
                             ) : (
-                                teachers.map((teacher) => (
+                                filteredTeachers.map((teacher) => (
                                     <tr key={teacher.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                                         <td className="p-4">
                                             <div className="font-medium text-slate-900">{teacher.name}</div>
@@ -312,7 +334,7 @@ const ManageTeachers = () => {
                                             type="file"
                                             accept="image/*"
                                             onChange={handleFileChange}
-                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-brand-orange hover:file:bg-orange-100"
+                                            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-brand-blue hover:file:bg-blue-100"
                                         />
                                     </div>
                                     <p className="text-xs text-slate-400 mt-1">Upload a square image (JPG/PNG).</p>
@@ -359,7 +381,7 @@ const ManageTeachers = () => {
                                         name="isHod"
                                         checked={formData.isHod}
                                         onChange={(e) => setFormData(prev => ({ ...prev, isHod: e.target.checked }))}
-                                        className="w-5 h-5 text-brand-orange rounded focus:ring-brand-orange"
+                                        className="w-5 h-5 text-brand-blue rounded focus:ring-brand-blue"
                                     />
                                     <label htmlFor="isHod" className="text-slate-700 font-medium cursor-pointer select-none">
                                         Assign as Head of Department (HOD)

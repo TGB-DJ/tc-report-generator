@@ -40,7 +40,7 @@ const FeePaymentInput = ({ title = "Fee Payments", payments = [], onChange, show
             <div className="flex justify-between items-center">
                 <h4 className="font-semibold text-slate-700">{title}</h4>
                 <div className="text-sm text-slate-600">
-                    Total: <span className="font-bold text-brand-orange">₹{totalPaid.toLocaleString()}</span>
+                    Total: <span className="font-bold text-brand-blue">₹{totalPaid.toLocaleString()}</span>
                 </div>
             </div>
 
@@ -110,7 +110,7 @@ const FeePaymentInput = ({ title = "Fee Payments", payments = [], onChange, show
                 type="button"
                 variant="ghost"
                 onClick={addPayment}
-                className="w-full border-dashed border-2 border-slate-200 hover:border-brand-orange/50 hover:bg-brand-orange/5"
+                className="w-full border-dashed border-2 border-slate-200 hover:border-brand-blue/50 hover:bg-brand-blue/5"
             >
                 <Plus size={16} className="mr-2" />
                 Add {title} Entry

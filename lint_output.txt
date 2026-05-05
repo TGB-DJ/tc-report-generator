@@ -1,0 +1,102 @@
+
+> tc-report@0.0.0 lint
+> eslint .
+
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\admin_fix.js
+  77:9  error  'process' is not defined  no-undef
+  83:9  error  'process' is not defined  no-undef
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\create_admin.js
+   1:1  error  'dhan' is not defined     no-undef
+  67:9  error  'process' is not defined  no-undef
+  70:9  error  'process' is not defined  no-undef
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\generate_php_report.js
+  10:7  error  'monthYear' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\promote_admin.js
+   2:24  error  'doc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                      no-unused-vars
+   2:29  error  'setDoc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                   no-unused-vars
+   2:37  error  'getDoc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                   no-unused-vars
+   3:10  error  'getAuth' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                  no-unused-vars
+   8:13  error  'process' is not defined                                                                        no-undef
+   9:17  error  'process' is not defined                                                                        no-undef
+  10:16  error  'process' is not defined                                                                        no-undef
+  11:20  error  'process' is not defined                                                                        no-undef
+  12:24  error  'process' is not defined                                                                        no-undef
+  13:12  error  'process' is not defined                                                                        no-undef
+  17:7   error  'db' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u              no-unused-vars
+  19:7   error  'promoteToAdmin' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\seedAdmin.js
+   3:10  error  'getFirestore' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  41:17  error  'process' is not defined                                                             no-undef
+  45:13  error  'process' is not defined                                                             no-undef
+  70:9   error  'process' is not defined                                                             no-undef
+  73:9   error  'process' is not defined                                                             no-undef
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\components\BulkTCPrintModal.jsx
+  9:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\components\Layout.jsx
+  5:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  8:34  error  'Icon' is defined but never used                                               no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\components\StudentFeesForm.jsx
+   69:11  error  'regBalance' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  134:84  error  'index' is defined but never used                                                           no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\components\UniversityExamForm.jsx
+  1:10  error  'useState' is defined but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+  1:20  error  'useEffect' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\components\ui\Button.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\components\ui\Card.jsx
+  1:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\components\ui\GlowingLogo.jsx
+  2:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\context\AuthContext.jsx
+    3:5   error  'createUserWithEmailAndPassword' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                           no-unused-vars
+   16:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  270:49  error  'deleteApp' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                       no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\lib\firebase.js
+  3:10  error  'getFirestore' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\pages\Login.jsx
+  4:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\pages\admin\AdminDashboard.jsx
+   2:31  error  'setDoc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                   no-unused-vars
+   2:39  error  'deleteDoc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                no-unused-vars
+   2:50  error  'doc' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                      no-unused-vars
+   9:41  error  'Icon' is defined but never used                                                                no-unused-vars
+  40:19  error  'adminsSnapshot' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\pages\admin\ManageAdmins.jsx
+  8:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\pages\admin\ManageEvents.jsx
+  2:62  error  'orderBy' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\pages\admin\ManageTeachers.jsx
+  12:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\pages\admin\Reports.jsx
+  2:38  error  'where' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\pages\student\StudentDashboard.jsx
+  2:58  error  'orderBy' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  9:10  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+
+C:\Users\Pradeep\OneDrive\Desktop\tc report\src\pages\teacher\TeacherDashboard.jsx
+   2:58  error  'orderBy' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  13:27  error  'motion' is defined but never used. Allowed unused vars must match /^[A-Z_]/u   no-unused-vars
+
+Ô£û 51 problems (51 errors, 0 warnings)
+

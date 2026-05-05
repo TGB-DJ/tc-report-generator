@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, writeBatch, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../lib/firebase';
+import { collection, getDocs, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -12,7 +11,7 @@ import MonthlyTestForm from '../../components/MonthlyTestForm';
 import FeePaymentInput from '../../components/FeePaymentInput';
 import Toast from '../../components/ui/Toast';
 import { Trash2, Plus, Filter, X, Pencil, Printer, Eye, RefreshCw } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { DEPARTMENT_CATEGORIES, getYearOptions } from '../../constants/departments';
 import { RELIGIONS, COMMUNITIES } from '../../constants/studentData';
 import BulkTCPrintModal from '../../components/BulkTCPrintModal';
@@ -32,6 +31,7 @@ const ManageStudents = () => {
     const { createUser } = useAuth(); // Assuming createUser is exposed in AuthContext for admin actions
 
     // Filters State
+    const [showFilters, setShowFilters] = useState(false);
     const [statusFilter, setStatusFilter] = useState(STUDENT_STATUS.CURRENT); // NEW: 'current' or 'alumni'
     const [filters, setFilters] = useState({
         dept: '',
@@ -52,6 +52,7 @@ const ManageStudents = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isViewOnly, setIsViewOnly] = useState(false); // NEW: View Only Mode
     const [editingStudent, setEditingStudent] = useState(null);
+    // eslint-disable-next-line no-unused-vars
     const [photoFile, setPhotoFile] = useState(null);
 
     const [formData, setFormData] = useState({
@@ -267,6 +268,13 @@ const ManageStudents = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Form Validation for strict fields required to save a student
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.dept || !formData.class || !formData.regno || !formData.admissionNo || !formData.aadharNo || !formData.gender || !formData.dob) {
+            setFormError('Please fill in ALL compulsory fields (First Name, Last Name, Email, Phone, Dept, Class, Reg No, Admission No, Aadhar, Gender, DOB).');
+            return;
+        }
+
         setFormLoading(true);
         setFormError('');
 
@@ -338,16 +346,18 @@ const ManageStudents = () => {
                     busTotal: 0,
                     busPaid: 0,
                     busBalance: 0,
-                    otherPaid: 0,
-                    payments: [], // Flattened payments if needed? No, use structure.
-                    busPayments: [],
-                    otherPayments: []
+                    total: formData.feesTotal || 0,
+                    busTotal: formData.feesBusTotal || 0,
+                    paid: formData.feesPaid || 0,
+                    busPaid: formData.feesBus || 0,
+                    balance: (formData.feesTotal || 0) + (formData.feesBusTotal || 0) - ((formData.feesPaid || 0) + (formData.feesBus || 0)),
+                    payments: formData.feePayments || [],
+                    busPayments: formData.busPayments || [],
+                    otherPayments: formData.otherPayments || []
                 },
-                academicRecords: formData.academicRecords, // Save Academic Records
-                password: passwordToUse // Store password for admin visibility
+                academicRecords: formData.academicRecords || { universityExams: [], monthlyTests: {} },
+                updatedAt: new Date().toISOString(),
             };
-
-            let docId;
 
             if (editingStudent) {
                 const studentRef = doc(db, "students", editingStudent.id);
@@ -505,11 +515,11 @@ const ManageStudents = () => {
                 // Create Fee History Record
                 const newHistory = {
                     date: new Date().toISOString(),
-                    semester: currentSem.toString() || 'Unknown',
+                    semester: student.semester ? student.semester.toString() : 'Unknown',
                     tuition: tuitionAdd,
                     bus: busAdd,
                     total: tuitionAdd + busAdd,
-                    desc: `Semester ${currentSem} Fee Update`
+                    desc: `Semester ${student.semester || 'Unknown'} Fee Update`
                 };
 
                 const currentHistory = currentFees.history || [];
@@ -574,13 +584,13 @@ const ManageStudents = () => {
 
             {/* Filter Section */}
             <Card className="p-4">
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-4">
+                <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
                     {/* Status Tabs */}
                     <div className="bg-slate-100 p-1 rounded-lg inline-flex">
                         <button
                             onClick={() => setStatusFilter(STUDENT_STATUS.CURRENT)}
                             className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${statusFilter === STUDENT_STATUS.CURRENT
-                                ? 'bg-white text-brand-orange shadow-sm'
+                                ? 'bg-white text-brand-blue shadow-sm'
                                 : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
@@ -589,7 +599,7 @@ const ManageStudents = () => {
                         <button
                             onClick={() => setStatusFilter(STUDENT_STATUS.ALUMNI)}
                             className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${statusFilter === STUDENT_STATUS.ALUMNI
-                                ? 'bg-white text-brand-orange shadow-sm'
+                                ? 'bg-white text-brand-blue shadow-sm'
                                 : 'text-slate-500 hover:text-slate-700'
                                 }`}
                         >
@@ -597,62 +607,75 @@ const ManageStudents = () => {
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-2 text-slate-600">
+                    <button
+                        onClick={() => setShowFilters(prev => !prev)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                            showFilters
+                                ? 'bg-brand-blue text-white border-brand-blue'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-brand-blue hover:text-brand-blue'
+                        }`}
+                    >
                         <Filter size={18} />
                         <span className="font-medium">Filters</span>
+                        {(filters.dept || filters.class || filters.academicYear) && (
+                            <span className="w-2 h-2 rounded-full bg-red-400 ml-1"></span>
+                        )}
+                    </button>
+                </div>
+
+                {showFilters && (
+                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Select
+                                label="Department"
+                                value={filters.dept}
+                                onChange={(e) => setFilters(prev => ({ ...prev, dept: e.target.value, class: '' }))}
+                                groupedOptions={DEPARTMENT_CATEGORIES}
+                            />
+
+                            {/* Only show Class filter for Current Students */}
+                            {statusFilter === STUDENT_STATUS.CURRENT && (
+                                <Select
+                                    label="Class/Year"
+                                    value={filters.class}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, class: e.target.value }))}
+                                    options={filters.dept ? getYearOptions(filters.dept) : ['1st Year', '2nd Year', '3rd Year']}
+                                />
+                            )}
+
+                            {/* Show Academic Year (Batch) for Alumni (or optional for current) */}
+                            <Select
+                                label={statusFilter === STUDENT_STATUS.ALUMNI ? "Batch (Academic Year)" : "Academic Year"}
+                                value={filters.academicYear}
+                                onChange={(e) => setFilters(prev => ({ ...prev, academicYear: e.target.value }))}
+                                options={['2022-2023', '2023-2024', '2024-2025', '2025-2026']}
+                            />
+                        </div>
+
+                        {/* Bulk Actions Toolbar */}
+                        <div className="flex gap-3 border-t border-slate-100 pt-3">
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
+                                    setIsPromoteModalOpen(true);
+                                }}
+                                disabled={filteredStudents.length === 0}
+                            >
+                                Switch to Next Sem
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={() => {
+                                    if (!filters.dept || !filters.class) return alert("Select Department and Class.");
+                                    setIsFeeModalOpen(true);
+                                }}
+                                disabled={!filters.dept || !filters.class || filteredStudents.length === 0}
+                            >
+                                Update Fees
+                            </Button>
+                        </div>
                     </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Select
-                        label="Department"
-                        value={filters.dept}
-                        onChange={(e) => setFilters(prev => ({ ...prev, dept: e.target.value, class: '' }))}
-                        groupedOptions={DEPARTMENT_CATEGORIES}
-                    />
-
-                    {/* Only show Class filter for Current Students */}
-                    {statusFilter === STUDENT_STATUS.CURRENT && (
-                        <Select
-                            label="Class/Year"
-                            value={filters.class}
-                            onChange={(e) => setFilters(prev => ({ ...prev, class: e.target.value }))}
-                            options={filters.dept ? getYearOptions(filters.dept) : ['1st Year', '2nd Year', '3rd Year']}
-                        />
-                    )}
-
-                    {/* Show Academic Year (Batch) for Alumni (or optional for current) */}
-                    <Select
-                        label={statusFilter === STUDENT_STATUS.ALUMNI ? "Batch (Academic Year)" : "Academic Year"}
-                        value={filters.academicYear}
-                        onChange={(e) => setFilters(prev => ({ ...prev, academicYear: e.target.value }))}
-                        // You might want to dynamically generate these or fetch from DB
-                        options={['2022-2023', '2023-2024', '2024-2025', '2025-2026']}
-                    />
-                </div>
-
-                {/* Bulk Actions Toolbar (Visible only when filters active) */}
-                <div className="mt-4 flex gap-3 border-t border-slate-100 pt-3">
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            setIsPromoteModalOpen(true);
-                        }}
-                        disabled={filteredStudents.length === 0}
-                    >
-                        Switch to Next Sem
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={() => {
-                            if (!filters.dept || !filters.class) return alert("Select Department and Class.");
-                            setIsFeeModalOpen(true);
-                        }}
-                        disabled={!filters.dept || !filters.class || filteredStudents.length === 0}
-                    >
-                        Update Fees
-                    </Button>
-                </div>
+                )}
             </Card>
 
             <Card className="overflow-hidden p-0">
@@ -665,7 +688,7 @@ const ManageStudents = () => {
                                         type="checkbox"
                                         checked={isAllSelected}
                                         onChange={handleSelectAll}
-                                        className="rounded border-slate-300 text-brand-orange focus:ring-brand-orange"
+                                        className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
                                     />
                                 </th>
                                 <th className="p-4 font-semibold text-slate-600">Reg No</th>
@@ -692,13 +715,13 @@ const ManageStudents = () => {
                                                 type="checkbox"
                                                 checked={selectedStudents.includes(student.id)}
                                                 onChange={() => handleSelectStudent(student.id)}
-                                                className="rounded border-slate-300 text-brand-orange focus:ring-brand-orange"
+                                                className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
                                             />
                                         </td>
                                         <td className="p-4">{student.regno}</td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-orange to-orange-600 flex items-center justify-center text-white font-bold text-sm">
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-blue to-blue-600 flex items-center justify-center text-white font-bold text-sm">
                                                     {student.name?.charAt(0).toUpperCase()}
                                                 </div>
                                                 <span className="font-medium">{student.name}</span>
@@ -772,26 +795,47 @@ const ManageStudents = () => {
                                 )}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* NEW: Profile Picture Input */}
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Profile Picture</label>
-                                        <div className="flex items-center gap-4">
-                                            {editingStudent?.photoUrl && (
-                                                <img
-                                                    src={editingStudent.photoUrl}
-                                                    alt="Current Profile"
-                                                    className="w-12 h-12 rounded-full object-cover border border-slate-200"
-                                                />
-                                            )}
-                                            {!isViewOnly && (
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={handleFileChange}
-                                                    className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-brand-orange hover:file:bg-orange-100"
-                                                />
-                                            )}
+                                    <div className="md:col-span-2 flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Profile Picture</label>
+                                            <div className="flex items-center gap-4">
+                                                {editingStudent?.photoUrl && (
+                                                    <img
+                                                        src={editingStudent.photoUrl}
+                                                        alt="Current Profile"
+                                                        className="w-16 h-16 rounded-full object-cover border-2 border-slate-200"
+                                                    />
+                                                )}
+                                                {!isViewOnly && (
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={handleFileChange}
+                                                        className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-brand-blue hover:file:bg-blue-100"
+                                                    />
+                                                )}
+                                            </div>
+                                            {!isViewOnly && <p className="text-xs text-slate-400 mt-2">Upload a square image (JPG/PNG). It will be synced with the user profile.</p>}
                                         </div>
-                                        {!isViewOnly && <p className="text-xs text-slate-400 mt-1">Upload a square image (JPG/PNG). It will be synced with the user profile.</p>}
+
+                                        {/* QR Code display for Admin View mode */}
+                                        {isViewOnly && editingStudent && (
+                                            <div className="flex-shrink-0 relative group flex flex-col items-center pl-4 border-l border-slate-100">
+                                                <div className="w-24 h-24 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
+                                                    <img 
+                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(JSON.stringify({
+                                                            id: editingStudent.id,
+                                                            regno: editingStudent.regno,
+                                                            name: editingStudent.name,
+                                                            class: editingStudent.class
+                                                        }))}`}
+                                                        alt="Student Pass QR" 
+                                                        className="w-full h-full object-contain"
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] uppercase font-bold text-slate-400 mt-1.5 tracking-wide text-center">Library / Lab Pass</p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <fieldset disabled={isViewOnly} className="contents">
@@ -965,7 +1009,7 @@ const ManageStudents = () => {
                             <h3 className="text-xl font-bold text-slate-800 mb-2">Promote Students</h3>
                             <p className="text-slate-600 mb-4">
                                 You are about to promote <b>{filteredStudents.length}</b> students
-                                {filters.class ? <span> from <span className="font-bold text-brand-orange">{filters.class}</span></span> : " across ALL classes"}
+                                {filters.class ? <span> from <span className="font-bold text-brand-blue">{filters.class}</span></span> : " across ALL classes"}
                                 to the next year.
                             </p>
                             <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg mb-4">

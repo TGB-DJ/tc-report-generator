@@ -1,0 +1,27 @@
+
+> tc-report@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mÔ£ô[39m 2169 modules transformed.
+[plugin vite:reporter] 
+(!) C:/Users/Pradeep/OneDrive/Desktop/tc report/node_modules/firebase/auth/dist/esm/index.esm.js is dynamically imported by C:/Users/Pradeep/OneDrive/Desktop/tc report/src/context/AuthContext.jsx but also statically imported by C:/Users/Pradeep/OneDrive/Desktop/tc report/src/context/AuthContext.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/lib/firebase.js, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) C:/Users/Pradeep/OneDrive/Desktop/tc report/node_modules/firebase/app/dist/esm/index.esm.js is dynamically imported by C:/Users/Pradeep/OneDrive/Desktop/tc report/src/context/AuthContext.jsx but also statically imported by C:/Users/Pradeep/OneDrive/Desktop/tc report/src/lib/firebase.js, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) C:/Users/Pradeep/OneDrive/Desktop/tc report/src/lib/firebase.js is dynamically imported by C:/Users/Pradeep/OneDrive/Desktop/tc report/src/components/ProtectedRoute.jsx but also statically imported by C:/Users/Pradeep/OneDrive/Desktop/tc report/src/components/BulkTCPrintModal.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/context/AuthContext.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/Login.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/admin/AdminDashboard.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/admin/ManageAdmins.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/admin/ManageEvents.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/admin/ManageStudents.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/admin/ManageTeachers.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/admin/Reports.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/student/StudentDashboard.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/student/TCGenerator.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/student/UniversityMarkSheet.jsx, C:/Users/Pradeep/OneDrive/Desktop/tc report/src/pages/teacher/TeacherDashboard.jsx, dynamic import will not move module into another chunk.
+
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                 [39m[1m[2m  0.55 kB[22m[1m[22m[2m Ôöé gzip:   0.34 kB[22m
+[2mdist/[22m[35massets/index-DXT9HpOs.css  [39m[1m[2m 46.12 kB[22m[1m[22m[2m Ôöé gzip:   8.02 kB[22m
+[2mdist/[22m[36massets/index-CeyK6vRi.js   [39m[1m[33m896.15 kB[39m[22m[2m Ôöé gzip: 268.95 kB[22m
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[32mÔ£ô built in 6.25s[39m

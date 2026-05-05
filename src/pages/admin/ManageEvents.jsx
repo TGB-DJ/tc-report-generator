@@ -121,7 +121,7 @@ const ManageEvents = () => {
                 <div className="lg:col-span-1">
                     <Card className="sticky top-6">
                         <div className="flex items-center gap-2 mb-4">
-                            <Send className="text-brand-orange" size={20} />
+                            <Send className="text-brand-blue" size={20} />
                             <h3 className="font-bold text-lg text-slate-700">Create Notification</h3>
                         </div>
 
@@ -143,7 +143,7 @@ const ManageEvents = () => {
                                     onChange={handleInputChange}
                                     required
                                     rows="5"
-                                    className="w-full p-3 rounded-xl border border-slate-200 focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/20 outline-none transition-all resize-none bg-slate-50 focus:bg-white"
+                                    className="w-full p-3 rounded-xl border border-slate-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all resize-none bg-slate-50 focus:bg-white"
                                     placeholder="Type your message here..."
                                 />
                             </div>
@@ -169,7 +169,7 @@ const ManageEvents = () => {
                                 required
                             />
 
-                            <Button type="submit" className="w-full bg-brand-orange hover:bg-orange-600 text-white" isLoading={submitting}>
+                            <Button type="submit" className="w-full bg-brand-blue hover:bg-blue-600 text-white" isLoading={submitting}>
                                 <Send size={18} className="mr-2" /> Post Notification
                             </Button>
                         </form>
@@ -191,7 +191,7 @@ const ManageEvents = () => {
 
                         {loading ? (
                             <div className="flex flex-col items-center justify-center p-12 text-slate-400">
-                                <div className="w-8 h-8 border-2 border-slate-200 border-t-brand-orange rounded-full animate-spin mb-2"></div>
+                                <div className="w-8 h-8 border-2 border-slate-200 border-t-brand-blue rounded-full animate-spin mb-2"></div>
                                 <p>Loading history...</p>
                             </div>
                         ) : events.length === 0 ? (
@@ -206,14 +206,14 @@ const ManageEvents = () => {
                             <div className="space-y-4">
                                 {events.map((event) => (
                                     <div key={event.id} className="p-5 border border-slate-100 rounded-xl hover:shadow-md transition-all bg-white group relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand-orange to-brand-accent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand-blue to-brand-accent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
                                         <div className="flex justify-between items-start gap-4">
                                             <div className="flex-1">
                                                 <div className="flex flex-wrap items-center gap-2 mb-2">
                                                     <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${event.target === 'all' ? 'bg-purple-100 text-purple-700' :
                                                         event.target === 'student' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-orange-100 text-orange-700'
+                                                            'bg-blue-100 text-blue-700'
                                                         }`}>
                                                         {getTargetLabel(event.target)}
                                                     </span>

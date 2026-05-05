@@ -232,14 +232,39 @@ export const AuthProvider = ({ children }) => {
                 }, { merge: true });
             }
             else if (!userDoc.exists()) {
-                // RESTRICTED ACCESS: 
-                // Only allow login if the user already exists in the 'users' collection 
-                // (i.e., created by Admin or Seed script)
+                // If it doesn't exist under the new Google Auth UID, check if the email was registered under a different UID
+                const q = query(collection(db, "users"), where("email", "==", user.email));
+                const querySnapshot = await getDocs(q);
 
-                // Sign out the unauthorized user immediately
-                await signOut(auth);
+                if (!querySnapshot.empty) {
+                    const oldUserDoc = querySnapshot.docs[0];
+                    const oldUid = oldUserDoc.id;
+                    const existingUserData = oldUserDoc.data();
 
-                throw new Error("Access Denied. Your account has not been created by the Administrator.");
+                    if (oldUid !== user.uid) {
+                        console.log(`[AuthContext] Google Login: Migrating user from old UID (${oldUid}) to new Google UID (${user.uid})`);
+                        // 1. Migrate the users doc
+                        await setDoc(doc(db, "users", user.uid), { ...existingUserData, uid: user.uid });
+                        await deleteDoc(doc(db, "users", oldUid));
+
+                        // 2. Migrate the role-specific profile doc
+                        const roleColl = existingUserData.role === 'student' ? 'students' : 
+                                      (existingUserData.role === 'admin' ? 'admins' : 'teachers');
+                        
+                        const profileSnap = await getDoc(doc(db, roleColl, oldUid));
+                        if (profileSnap.exists()) {
+                            await setDoc(doc(db, roleColl, user.uid), { ...profileSnap.data(), uid: user.uid, id: user.uid });
+                            await deleteDoc(doc(db, roleColl, oldUid));
+                        }
+                    }
+                } else {
+                    // RESTRICTED ACCESS: 
+                    // Only allow login if the user already exists in the 'users' collection 
+                    // Sign out the unauthorized user immediately
+                    await signOut(auth);
+
+                    throw new Error("Access Denied. Your account has not been created by the Administrator.");
+                }
             }
 
             return user;
@@ -349,7 +374,7 @@ export const AuthProvider = ({ children }) => {
             {loading ? (
                 <div className="min-h-screen flex items-center justify-center bg-slate-50">
                     <div className="flex flex-col items-center gap-4">
-                        <div className="w-10 h-10 border-4 border-brand-orange border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
                         <p className="text-slate-500 font-medium">Loading Application...</p>
                         <button
                             onClick={() => window.location.reload()}

@@ -13,7 +13,7 @@ const Select = ({ label, name, value, onChange, options, required, className = '
                 value={value}
                 onChange={onChange}
                 required={required}
-                className={`w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent transition-all ${className}`}
+                className={`w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all ${className}`}
             >
                 <option value="">Select {label}</option>
                 {groupedOptions ? (

@@ -8,8 +8,8 @@ const project = {
     dept: 'DEPARTMENT OF COMPUTER SCIENCE',
     degree: 'B.Sc Computer Science',
     year: '2023-2026',
-    guide: 'Mrs. INDRA',
-    hod: 'Mr. PALANI'
+    guide: 'Mrs. R. Indira, M.Sc., M.Ed.',
+    hod: 'Mr. S. Palani, M.Sc., M.B.A., M.Phil., (Ph.D)'
 };
 
 let pages = [];
@@ -39,22 +39,32 @@ function genTheory(topic, paragraphs) {
 
 // 1. Cover
 pages.push(`
-<div class="center" style="margin-top: 50px;">
-    ${H(1, project.title)}
-    ${BR(2)}
-    <h3 style="font-weight: normal;">A Project Report Submitted to University of Madras Partial fulfillment of the requirement for the Award of the Degree of</h3>
-    <h2 style="text-decoration: none; margin-top: 10px;">${project.degree}</h2>
-    ${BR(2)}
-    <p class="center" style="text-indent: 0;">Submitted by</p>
-    ${H(3, project.student)}
-    <p class="center" style="text-indent: 0; font-weight: bold;">(REG. NO. ${project.regno})</p>
-    ${BR(2)}
-    <p class="center" style="text-indent: 0;">Under the Guidance of</p>
-    ${H(3, project.guide)}
-    ${BR(2)}
-    ${H(3, project.dept)}
-    <h2 style="text-decoration: none; margin-top: 10px;">${project.college}</h2>
-    <p class="center" style="text-indent: 0; font-weight: bold; font-size: 14pt;">${project.year}</p>
+<div class="center" style="margin-top: 20px;">
+    <h1 style="font-size: 18pt; font-weight: bold; text-decoration: none; margin-bottom: 25px;">${project.title}</h1>
+    
+    <p class="center" style="font-size: 12pt; text-indent: 0; margin: 0; line-height: 1.4;">A Project Report Submitted to University of Madras</p>
+    <p class="center" style="font-size: 11pt; text-indent: 0; margin: 0; line-height: 1.4;">Partial fulfillment of the requirement for the</p>
+    <p class="center" style="font-size: 11pt; text-indent: 0; margin: 0 0 15px 0; line-height: 1.4;">Award of the Degree of</p>
+    
+    <h2 style="font-size: 16pt; font-weight: bold; text-decoration: none; text-transform: none; margin-bottom: 15px;">B.Sc., (COMPUTER SCIENCE)</h2>
+    
+    <p class="center" style="font-size: 12pt; text-indent: 0; margin-bottom: 5px;">Submitted by</p>
+    <h3 style="font-size: 14pt; font-weight: bold; margin: 0; text-decoration: underline; text-underline-offset: 4px;"><u>${project.student}</u></h3>
+    <p class="center" style="font-weight: bold; font-size: 11pt; text-indent: 0; margin-top: 5px; margin-bottom: 20px;">(REG. NO. ${project.regno})</p>
+    
+    <p class="center" style="font-size: 12pt; text-indent: 0; font-weight: bold; margin-bottom: 5px;">Under the Guidance of</p>
+    <h3 style="font-size: 13pt; font-weight: bold; margin-bottom: 2px;">${project.guide}</h3>
+    <p class="center" style="font-size: 11pt; text-indent: 0; margin-top: 0; margin-bottom: 25px; line-height: 1.4;">Internal Guide<br>Kanchi Shri Krishna College of Arts & Science</p>
+    
+    <div style="text-align: center; margin-bottom: 25px;">
+        <img src="logo ksk.jpg" style="max-height: 160px; height: auto; border: 1px solid #000; padding: 5px;" alt="College Logo">
+    </div>
+    
+    <h3 style="font-size: 14pt; font-weight: bold; text-transform: uppercase; margin-bottom: 4px;">DEPARTMENT OF COMPUTER SCIENCE</h3>
+    <h2 style="font-size: 15pt; font-weight: bold; text-transform: uppercase; text-decoration: none; margin-bottom: 4px; margin-top: 4px;">KANCHI SHRI KRISHNA COLLEGE OF ARTS AND SCIENCE</h2>
+    <p class="center" style="font-weight: bold; font-size: 12pt; text-indent: 0; margin: 0; text-transform: uppercase;">KILAMBI, KANCHIPURAM-631 551.</p>
+    <br>
+    <p class="center" style="font-weight: bold; font-size: 12pt; text-indent: 0; margin: 0; text-transform: uppercase;">MARCH - 2026</p>
 </div>
 `);
 
@@ -146,9 +156,33 @@ pages.push(genTheory("Advantages of Web Architectures", 5));
 // 11. Sys Reqs
 addTOC("4. SYSTEM REQUIREMENTS");
 addTOC("4.1 Hardware Requirements");
-pages.push(H(2, "4. SYSTEM REQUIREMENTS") + H(3, "4.1 Hardware Requirements") + genTheory("Physical Server Processing Substrates", 4));
 addTOC("4.2 Software Requirements");
-pages.push(H(3, "4.2 Software Requirements") + genTheory("LAMP Stack Configurations", 5));
+
+const hardwareTable = `
+<table>
+  <tr><th>Component</th><th>Minimum Specification</th><th>Recommended Specification</th></tr>
+  <tr><td>Processor</td><td>Dual-Core 2.0 GHz</td><td>Intel Core i3 / i5 or higher</td></tr>
+  <tr><td>RAM</td><td>4 GB DDR4</td><td>8 GB DDR4 or higher</td></tr>
+  <tr><td>Storage</td><td>500 MB Available Space</td><td>Solid State Drive (SSD)</td></tr>
+  <tr><td>Display</td><td>1280 x 720 Resolution</td><td>1920 x 1080 (HD)</td></tr>
+  <tr><td>Network</td><td>Broadband Connection</td><td>High-Speed Wi-Fi / Ethernet</td></tr>
+</table>
+`;
+
+const softwareTable = `
+<table>
+  <tr><th>Software Category</th><th>Specification / Version</th></tr>
+  <tr><td>Operating System</td><td>Windows 10 / 11, macOS, or Linux</td></tr>
+  <tr><td>Web Browser</td><td>Google Chrome / Mozilla Firefox / Edge</td></tr>
+  <tr><td>Environment</td><td>Node.js (v18+) & Python (v3.10+)</td></tr>
+  <tr><td>Frontend Framework</td><td>React 19 (Vite)</td></tr>
+  <tr><td>Database / Backend</td><td>Google Firebase (Firestore, Auth)</td></tr>
+  <tr><td>Styling Engine</td><td>Tailwind CSS</td></tr>
+  <tr><td>IDE / Editor</td><td>Visual Studio Code</td></tr>
+</table>
+`;
+
+pages.push(H(2, "4. SYSTEM REQUIREMENTS") + H(3, "4.1 Hardware Requirements") + hardwareTable + H(3, "4.2 Software Requirements") + softwareTable);
 addTOC("4.3 Front End Description (HTML/CSS)");
 pages.push(H(3, "4.3 Front End Description (HTML/CSS)") + genTheory("DOM Manipulation and Viewports", 5));
 addTOC("4.4 Back End Description (PHP/MySQL)");
@@ -277,9 +311,53 @@ pages.push(H(3, "11.5 MySQL Subroutines - Query Matrix 2") + queryBlock + BR(1) 
 
 // 19. Screenshots
 addTOC("12. SAMPLE SCREENSHOTS");
-pages.push(H(2, "12. SAMPLE SCREENSHOTS") + H(3, "12.1 Authentication Gateway") + `<div style="height: 500px; border: 3px dashed #333; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; background: #eee;">[SCREENSHOT DISPLAY: LOGIN PORTAL]</div>` + P("The entry verification graphical node."));
-for (let i = 2; i <= 8; i++) {
-    pages.push(H(3, "12." + i + " Operational Dashboard Sub-View") + `<div style="height: 500px; border: 3px dashed #333; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; background: #eee;">[SCREENSHOT DISPLAY: ADMINISTRATIVE INTERFACE COMPONENT ${i}]</div>` + P("Visualization representing the dynamically populated interface executing complex tabular aggregations derived natively from PHP matrix loops seamlessly."));
+const screenshotData = [
+    { 
+        title: "Authentication Interface", 
+        file: "login.png", 
+        desc: "The Authentication portal serves as the primary gateway into the College Management System. It features a responsive centered authentication card layout rendered using React and styled with Tailwind CSS transitions. Users are required to input their authorized email credentials and password. Upon form submission, client-side validation logic ensures fields are populated before dispatching an asynchronous request to the Google Firebase Authentication suite. The application securely routes users to either the Administrator or Faculty workspace based on role token verification dispatching instantaneous micro-animations upon errors securely." 
+    },
+    { 
+        title: "Administrator Dashboard", 
+        file: "admin dashboard.png", 
+        desc: "The Administrator Dashboard offers a centralized control hub displaying real-time analytics across multiple institutional streams. It leverages React’s stateful hooks to dynamically consume live data feeds from Google Firestore nodes. Visual components include top-level metric counters representing Total Enrolled Students, Active Instructors Registry, and Pending Academic Approval queues. Below the aggregated visual summaries, interactive widgets list recent system audit logs andUpcoming schedule synchronizations maintaining absolute operational oversight easily without accessing raw database shells directly dispatching modular tracking latency safeguards successfully." 
+    },
+    { 
+        title: "Student Management Portal", 
+        file: "manage students in admin.png", 
+        desc: "The Student Management interface serves as a comprehensive visual node managing individual student demographic files. Clerical administrators can query specifically bound registers to display tabular rows showcasing individual student names, IDs, department nodes, and authentication flags. Interactive triggers embedded within each row enable administrators to invoke Edit or Remove macros instantly, modifying relational documents stored within the Firestore architecture securely. This interface incorporates real-time server-side synchronization dispatching instant GUI updates preventing structural discrepancies effectively replacing traditional manual analog documentation architectures securely." 
+    },
+    { 
+        title: "Faculty Management Portal", 
+        file: "manage teacher in amin.png", 
+        desc: "The Faculty Management workspace is engineered to control authorized instructor profiles and teaching permissions nodes. Managers can dynamically append new lecturer credentials involving full name vectors, academic qualifications titles, and designated department routing parameters. Each profile connects relationally to class schedule clusters tracking workload distributions across semesters securely. This module implements structural validation preventing duplicate entries and ensures department head clearance vectors are enforced strictly before authenticating new lecturers into the system grid maintaining deep perimeter security across sensitive personnel archives continuously." 
+    },
+    { 
+        title: "Faculty Operational Dashboard", 
+        file: "teacher dash board.png", 
+        desc: "The Faculty Operational Workspace streamlines daily academic routines for course instructors comprehensively. Upon accessing the dashboard view, lecturers receive curated indices highlighting daily lecture slots, automated attendance thresholds monitoring gates, and upcoming grade evaluation targets. The interface enables instructors to trigger roll-call workflows registering student attendance directly into corresponding document matrices synced with Firestore architecture securely. Integrated visual prompts highlight outstanding grading tasks allowing instructors to dispatch instantaneous academic scorecards directly into student dashboards securely transparently always." 
+    },
+    { 
+        title: "Student Profile Narrative", 
+        file: "student profile.png", 
+        desc: "The Student Profile workspace represents an individual student’s academic dashboard layout maintaining comprehensive longitudinal records. It aggregates demographic profiling including personal information details, fee structure clearance statements, and grade averages parsing benchmarks securely. The interface utilizes React router parameters to render strictly authorized views ensuring students can only traverse their own operational boundaries without modifying central document archives natively. This ensures students maintain absolute visibility over their academic progress enabling continuous transparent communication between administrators and student users safely." 
+    },
+    { 
+        title: "Faculty Profile View", 
+        file: "teacher profile.png", 
+        desc: "The Faculty Profile workspace establishes personal verification metrics highlighting instructor credentials explicitly for verification setups. It showcases full demographic mapping containing designations, department bindings, teaching workloads tracking grids, and primary contact fields securely. This ensures departments can audit lecturer capacities against academic semesters allocation limits cleanly without traversing disconnected spreadsheets silos. Profile datasets connect directly to live updates synced with administrative registries guaranteeing absolutely minimal data discrepancies across institutional personnel archives always throughout setup setups cleanly." 
+    },
+    { 
+        title: "Event Notification Push Node", 
+        file: "events notification push.png", 
+        desc: "The Event Notification node functions as the primary broadcasting system facilitating smooth institutional announcements dispatch. Administrators can compose title parameters and payloads detailing upcoming examinations schedules, fee deadlines, or holiday declarations securely. Inside the UI node, a submission trigger dispatches the response creating corresponding alert documents stored on Firestore grids instantly. Subscribed nodes traverse these document matrices producing instantaneous dynamic UI overlays inside student panels guaranteeing critical updates propagate uniformly across campus ecosystems accurately without communication latency setups cleanly." 
+    }
+];
+
+pages.push(H(2, "12. SAMPLE SCREENSHOTS") + H(3, "12.1 " + screenshotData[0].title) + `<div style="text-align: center; margin: 20px 0;"><img src="${screenshotData[0].file}" style="max-height: 500px; max-width: 100%; border: 1px solid #000;" alt="${screenshotData[0].title}"><p class="center" style="font-style: italic; text-indent: 0; margin-top: 10px;">${screenshotData[0].desc}</p></div>`);
+
+for (let i = 1; i < screenshotData.length; i++) {
+    pages.push(H(3, "12." + (i + 1) + " " + screenshotData[i].title) + `<div style="text-align: center; margin: 20px 0;"><img src="${screenshotData[i].file}" style="max-height: 500px; max-width: 100%; border: 1px solid #000;" alt="${screenshotData[i].title}"><p class="center" style="font-style: italic; text-indent: 0; margin-top: 10px;">${screenshotData[i].desc}</p></div>`);
 }
 
 // 20. Future Enhancements
@@ -348,7 +426,8 @@ let html = `<!DOCTYPE html>
         box-sizing: border-box; 
         counter-increment: pageNumber;
         width: 210mm;
-        min-height: 297mm;
+        height: 297mm;
+        overflow: hidden;
         background: white;
         margin: 0 auto 20px auto;
         box-shadow: 0 0 5px rgba(0,0,0,0.2);
@@ -357,7 +436,6 @@ let html = `<!DOCTYPE html>
         border: 2px solid #000; 
         padding: 20mm 20mm 30mm 20mm;
         height: 100%;
-        min-height: calc(297mm - 30mm); 
         box-sizing: border-box; 
         position: relative;
     }
@@ -377,9 +455,11 @@ let html = `<!DOCTYPE html>
         .page { 
             box-shadow: none; 
             margin: 0; 
-            width: auto; 
-            min-height: auto; 
-            height: 100vh;
+            width: 210mm;
+            height: 297mm;
+            page-break-after: always;
+            page-break-inside: avoid;
+            overflow: hidden;
         }
     }
 

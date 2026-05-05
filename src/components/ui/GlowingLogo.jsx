@@ -10,7 +10,7 @@ const GlowingLogo = ({ text = "KJ" }) => {
             transition={{ duration: 0.5 }}
         >
             {/* External Glow (Blur) */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-brand-orange via-orange-400 to-blue-500 rounded-lg blur opacity-40 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-brand-blue via-blue-400 to-blue-500 rounded-lg blur opacity-40 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
 
             {/* Main Badge Container */}
             <div className="relative px-3 py-2 bg-slate-900 rounded-lg ring-1 ring-gray-900/5 leading-none flex items-center justify-center">
@@ -25,8 +25,8 @@ const GlowingLogo = ({ text = "KJ" }) => {
 
                 {/* Orange Dot/Accent similar to the 'Freshman' badge idea */}
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-orange opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-orange"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-blue opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-blue"></span>
                 </span>
             </div>
         </motion.div>

@@ -13,52 +13,56 @@ import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import TCGenerator from "./pages/student/TCGenerator";
 import UniversityMarkSheet from "./pages/student/UniversityMarkSheet";
+import AttendanceMarker from "./pages/teacher/AttendanceMarker";
+import GlobalErrorBoundary from "./components/GlobalErrorBoundary";
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+    <GlobalErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
 
-          <Route element={<ProtectedRoute allowedRoles={['admin', 'hod']} />}>
-            <Route element={<Layout />}>
-              <Route path="/admin/students" element={<ManageStudents />} />
-              <Route path="/admin/teachers" element={<ManageTeachers />} />
-              <Route path="/admin/events" element={<ManageEvents />} />
+            <Route element={<ProtectedRoute allowedRoles={['admin', 'hod']} />}>
+              <Route element={<Layout />}>
+                <Route path="/admin/students" element={<ManageStudents />} />
+                <Route path="/admin/teachers" element={<ManageTeachers />} />
+                <Route path="/admin/events" element={<ManageEvents />} />
+              </Route>
             </Route>
-          </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route element={<Layout />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/admins" element={<ManageAdmins />} />
-              <Route path="/admin/reports" element={<Reports />} />
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route element={<Layout />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/admins" element={<ManageAdmins />} />
+                <Route path="/admin/reports" element={<Reports />} />
+              </Route>
             </Route>
-          </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['teacher', 'hod']} />}>
-            <Route element={<Layout />}>
-              <Route path="/teacher" element={<TeacherDashboard />} />
-              {/* Add other teacher routes here */}
+            <Route element={<ProtectedRoute allowedRoles={['teacher', 'hod']} />}>
+              <Route element={<Layout />}>
+                <Route path="/teacher" element={<TeacherDashboard />} />
+                <Route path="/teacher/attendance" element={<AttendanceMarker />} />
+              </Route>
             </Route>
-          </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-            <Route element={<Layout />}>
-              <Route path="/student" element={<StudentDashboard />} />
-              <Route path="/student/tc" element={<TCGenerator />} />
-              <Route path="/student/marks" element={<UniversityMarkSheet />} />
-              {/* Add other student routes here */}
+            <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+              <Route element={<Layout />}>
+                <Route path="/student" element={<StudentDashboard />} />
+                <Route path="/student/tc" element={<TCGenerator />} />
+                <Route path="/student/marks" element={<UniversityMarkSheet />} />
+                {/* Add other student routes here */}
+              </Route>
             </Route>
-          </Route>
 
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </GlobalErrorBoundary>
   );
 }
 

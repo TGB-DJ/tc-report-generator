@@ -180,7 +180,7 @@ const ManageAdmins = () => {
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-extrabold bg-gradient-to-r from-orange-600 to-purple-600 bg-clip-text text-transparent">
+                    <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                         Super Admin Panel
                     </h2>
                     <p className="text-slate-500 font-medium">Manage system administrators</p>
@@ -194,14 +194,14 @@ const ManageAdmins = () => {
                             placeholder="Search admins..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:outline-none transition-all"
+                            className="w-full pl-10 pr-4 py-2 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
                         />
                     </div>
                     <Button onClick={() => {
                         setEditingAdmin(null);
                         setFormData({ name: '', email: '', phone: '', password: '' });
                         setIsModalOpen(true);
-                    }} className="shadow-lg shadow-orange-500/30">
+                    }} className="shadow-lg shadow-blue-500/30">
                         <Plus size={20} /> Add Admin
                     </Button>
                 </div>

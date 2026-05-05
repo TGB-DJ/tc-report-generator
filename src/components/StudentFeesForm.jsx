@@ -15,6 +15,7 @@ const StudentFeesForm = ({ fees, onChange }) => {
     const [expandedSection, setExpandedSection] = useState('registration'); // State for expanding sections
 
     useEffect(() => {
+        // eslint-disable-next-line
         setLocalFees(fees || { registration: { total: 0, payments: [] }, semester: {} });
     }, [fees]);
 
@@ -136,18 +137,18 @@ const StudentFeesForm = ({ fees, onChange }) => {
                     const semBalance = semTotal - semPaid;
 
                     return (
-                        <div key={semName} className="p-4 border border-orange-200 rounded-xl bg-orange-50/30 relative">
+                        <div key={semName} className="p-4 border border-blue-200 rounded-xl bg-blue-50/30 relative">
                             <button
                                 type="button"
                                 onClick={() => removeSemester(semName)}
-                                className="absolute top-4 right-4 text-orange-300 hover:text-red-500"
+                                className="absolute top-4 right-4 text-blue-300 hover:text-red-500"
                                 title="Remove Semester"
                             >
                                 <Trash2 size={18} />
                             </button>
 
                             <div className="flex justify-between items-center mb-4 pr-8">
-                                <h5 className="font-bold text-orange-900">{semName}</h5>
+                                <h5 className="font-bold text-blue-900">{semName}</h5>
                                 <div className="text-sm space-x-3">
                                     <span className="text-slate-600">Paid: <b className="text-green-600">₹{semPaid}</b></span>
                                     <span className="text-slate-600">Bal: <b className={semBalance > 0 ? "text-red-500" : "text-green-600"}>₹{semBalance}</b></span>

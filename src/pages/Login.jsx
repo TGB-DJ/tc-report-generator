@@ -122,7 +122,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-orange-50 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50 p-4">
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
                     <motion.div
@@ -131,7 +131,7 @@ const Login = () => {
                         className="mb-6 flex justify-center"
                     >
                         <img
-                            src="/logo.svg"
+                            src="/ksk-logo.jpg"
                             alt="College Logo"
                             className="w-24 h-24 object-contain filter drop-shadow-xl"
                         />
@@ -194,14 +194,14 @@ const Login = () => {
                                 <a href="#" onClick={(e) => {
                                     e.preventDefault();
                                     alert("Please contact the Admin Office to reset your password.");
-                                }} className="text-brand-orange hover:underline">
+                                }} className="text-brand-blue hover:underline">
                                     Forgot Password?
                                 </a>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="w-full py-3 text-lg shadow-lg shadow-orange-500/20"
+                                className="w-full py-3 text-lg shadow-lg shadow-blue-500/20"
                                 disabled={loading}
                             >
                                 {loading ? (
@@ -264,7 +264,7 @@ const Login = () => {
 
                             {/* Hint for demo/dev purposes */}
                             <div className="text-xs text-center text-slate-400 mt-6">
-                                Powered by <span className="font-bold text-brand-orange">CJ Productions</span>
+                                Powered by <span className="font-bold text-brand-blue">CJ Productions</span>
                             </div>
                         </form>
                     </div>

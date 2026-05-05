@@ -3,7 +3,7 @@ import clsx from 'clsx';
 
 const Button = ({ children, variant = 'primary', className, isLoading, ...props }) => {
     const variants = {
-        primary: 'bg-gradient-to-r from-brand-orange to-brand-accent text-white hover:shadow-lg hover:shadow-orange-500/30',
+        primary: 'bg-gradient-to-r from-brand-blue to-brand-accent text-white hover:shadow-lg hover:shadow-blue-500/30',
         secondary: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300',
         danger: 'bg-red-500 text-white hover:bg-red-600 hover:shadow-lg hover:shadow-red-500/30',
         ghost: 'bg-transparent text-slate-600 hover:bg-slate-100',

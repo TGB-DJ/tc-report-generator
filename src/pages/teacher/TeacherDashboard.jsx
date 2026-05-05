@@ -404,13 +404,13 @@ const TeacherDashboard = () => {
                                                     <div
                                                         key={notif.id}
                                                         onClick={() => markAsRead(notif)}
-                                                        className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-orange-50/30' : ''}`}
+                                                        className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
                                                     >
                                                         <div className="flex justify-between items-start gap-3">
                                                             <div className="flex-1">
                                                                 <div className="flex items-center gap-2 mb-1">
                                                                     {!notif.isRead && (
-                                                                        <span className="w-2 h-2 rounded-full bg-brand-orange"></span>
+                                                                        <span className="w-2 h-2 rounded-full bg-brand-blue"></span>
                                                                     )}
                                                                     <span className="text-xs text-slate-400">{notif.date}</span>
                                                                     {notif.type === 'alert' && (
@@ -444,7 +444,7 @@ const TeacherDashboard = () => {
 
                     <button
                         onClick={() => setIsProfileModalOpen(true)}
-                        className="w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange font-bold text-lg hover:bg-brand-orange hover:text-white transition-colors overflow-hidden border border-brand-orange/20"
+                        className="w-10 h-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-bold text-lg hover:bg-brand-blue hover:text-white transition-colors overflow-hidden border border-brand-blue/20"
                     >
                         {teacherProfile?.photoUrl ? (
                             <img src={teacherProfile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
@@ -469,7 +469,7 @@ const TeacherDashboard = () => {
             <Card>
                 <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
-                        <Filter size={20} className="text-brand-orange" />
+                        <Filter size={20} className="text-brand-blue" />
                         <h3 className="font-semibold text-slate-700">Filter Students</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -525,10 +525,10 @@ const TeacherDashboard = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-slate-600">Filtered Students</p>
-                                <p className="text-3xl font-bold text-brand-orange mt-1">{filteredStudents.length}</p>
+                                <p className="text-3xl font-bold text-brand-blue mt-1">{filteredStudents.length}</p>
                             </div>
-                            <div className="p-3 bg-brand-orange/10 rounded-xl">
-                                <Users className="text-brand-orange" size={24} />
+                            <div className="p-3 bg-brand-blue/10 rounded-xl">
+                                <Users className="text-brand-blue" size={24} />
                             </div>
                         </div>
                     </div>
@@ -575,7 +575,7 @@ const TeacherDashboard = () => {
                                                 type="checkbox"
                                                 checked={isAllSelected}
                                                 onChange={handleSelectAll}
-                                                className="rounded border-slate-300 text-brand-orange focus:ring-brand-orange"
+                                                className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
                                             />
                                         </th>
                                         <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">Name</th>
@@ -600,13 +600,13 @@ const TeacherDashboard = () => {
                                                         type="checkbox"
                                                         checked={selectedStudents.includes(student.id)}
                                                         onChange={() => handleSelectStudent(student.id)}
-                                                        className="rounded border-slate-300 text-brand-orange focus:ring-brand-orange"
+                                                        className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
                                                     />
                                                 </td>
                                                 <td className="py-3 px-4 text-sm">
                                                     <button
                                                         onClick={() => setViewingStudent(student)}
-                                                        className="font-medium text-slate-900 hover:text-brand-orange hover:underline text-left"
+                                                        className="font-medium text-slate-900 hover:text-brand-blue hover:underline text-left"
                                                     >
                                                         {student.name}
                                                     </button>
@@ -741,7 +741,7 @@ const TeacherDashboard = () => {
                             <div className="p-6 space-y-6">
                                 {/* Personal Details */}
                                 <div>
-                                    <h4 className="font-semibold text-brand-orange mb-3 border-b border-orange-100 pb-2">Personal Details</h4>
+                                    <h4 className="font-semibold text-brand-blue mb-3 border-b border-blue-100 pb-2">Personal Details</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                         <div><span className="text-slate-500 block">Father's Name</span> <span className="font-medium">{viewingStudent.fatherName || '-'}</span></div>
                                         <div><span className="text-slate-500 block">Date of Birth</span> <span className="font-medium">{viewingStudent.dob || '-'}</span></div>
@@ -756,7 +756,7 @@ const TeacherDashboard = () => {
 
                                 {/* Academic Details */}
                                 <div>
-                                    <h4 className="font-semibold text-brand-orange mb-3 border-b border-orange-100 pb-2">Academic Details</h4>
+                                    <h4 className="font-semibold text-brand-blue mb-3 border-b border-blue-100 pb-2">Academic Details</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                         <div><span className="text-slate-500 block">Admission Date</span> <span className="font-medium">{viewingStudent.admissionDate || '-'}</span></div>
                                         <div><span className="text-slate-500 block">Academic Year</span> <span className="font-medium">{viewingStudent.academicYear || '-'}</span></div>
@@ -767,7 +767,7 @@ const TeacherDashboard = () => {
 
                                 {/* Fee Details */}
                                 <div>
-                                    <h4 className="font-semibold text-brand-orange mb-3 border-b border-orange-100 pb-2">Fee Status</h4>
+                                    <h4 className="font-semibold text-brand-blue mb-3 border-b border-blue-100 pb-2">Fee Status</h4>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                         {/* Tuition Fees */}
@@ -792,8 +792,8 @@ const TeacherDashboard = () => {
                                         </div>
 
                                         {/* Bus Fees */}
-                                        <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                                            <h5 className="font-semibold text-orange-800 mb-2 text-sm">Bus Fees</h5>
+                                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                            <h5 className="font-semibold text-blue-800 mb-2 text-sm">Bus Fees</h5>
                                             <div className="space-y-1 text-sm">
                                                 <div className="flex justify-between">
                                                     <span className="text-slate-500">Total</span>
@@ -803,7 +803,7 @@ const TeacherDashboard = () => {
                                                     <span className="text-slate-500">Paid</span>
                                                     <span className="font-medium text-green-600">₹{Number(viewingStudent.fees?.busPaid || 0).toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex justify-between pt-1 border-t border-orange-200 mt-1">
+                                                <div className="flex justify-between pt-1 border-t border-blue-200 mt-1">
                                                     <span className="text-slate-600 font-medium">Balance</span>
                                                     <span className={`font-bold ${Number(viewingStudent.fees?.busBalance || 0) > 0 ? 'text-red-500' : 'text-slate-400'}`}>
                                                         ₹{Number(viewingStudent.fees?.busBalance || 0).toLocaleString()}
@@ -904,7 +904,7 @@ const TeacherDashboard = () => {
                             <div className="p-8">
                                 <div className="flex flex-col items-center mb-6">
                                     <div className="relative group cursor-pointer">
-                                        <div className="w-24 h-24 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange text-3xl font-bold mb-3 overflow-hidden border-2 border-slate-100 group-hover:border-brand-orange transition-colors">
+                                        <div className="w-24 h-24 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue text-3xl font-bold mb-3 overflow-hidden border-2 border-slate-100 group-hover:border-brand-blue transition-colors">
                                             {teacherProfile.photoUrl ? (
                                                 <img src={teacherProfile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
                                             ) : (

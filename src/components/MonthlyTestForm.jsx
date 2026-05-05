@@ -9,6 +9,7 @@ const MonthlyTestForm = ({ tests = {}, onChange }) => {
     const [localTests, setLocalTests] = useState(tests || {});
 
     useEffect(() => {
+        // eslint-disable-next-line
         setLocalTests(tests || {});
     }, [tests]);
 

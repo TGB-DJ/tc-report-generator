@@ -4,7 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/ui/Button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 
 const TCGenerator = () => {
     const navigate = useNavigate();
@@ -51,10 +51,14 @@ const TCGenerator = () => {
     return (
         <div className="max-w-4xl mx-auto p-4">
             {/* Navigation Button */}
-            <div className="mb-4 no-print">
+            <div className="mb-4 no-print flex gap-2">
                 <Button variant="outline" onClick={() => navigate('/student')}>
                     <ArrowLeft size={16} className="mr-2" />
                     Back to Dashboard
+                </Button>
+                <Button onClick={() => window.print()}>
+                    <Printer size={16} className="mr-2" />
+                    Print TC
                 </Button>
             </div>
 
@@ -73,7 +77,7 @@ const TCGenerator = () => {
                             {/* College Logo */}
                             <div className="w-24 h-24 flex-shrink-0">
                                 <img
-                                    src="/college-logo.png"
+                                    src="/ksk-logo.jpg"
                                     alt="College Logo"
                                     className="w-full h-full object-contain"
                                     onError={(e) => { e.target.style.display = 'none'; }}

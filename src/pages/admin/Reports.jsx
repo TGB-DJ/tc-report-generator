@@ -157,13 +157,13 @@ const Reports = () => {
             <div className="flex gap-4 border-b border-slate-200">
                 <button
                     onClick={() => setActiveTab('community')}
-                    className={`pb-2 px-4 font-medium transition-colors ${activeTab === 'community' ? 'border-b-2 border-brand-orange text-brand-orange' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`pb-2 px-4 font-medium transition-colors ${activeTab === 'community' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                     Community Report
                 </button>
                 <button
                     onClick={() => setActiveTab('fees')}
-                    className={`pb-2 px-4 font-medium transition-colors ${activeTab === 'fees' ? 'border-b-2 border-brand-orange text-brand-orange' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`pb-2 px-4 font-medium transition-colors ${activeTab === 'fees' ? 'border-b-2 border-brand-blue text-brand-blue' : 'text-slate-500 hover:text-slate-700'}`}
                 >
                     Fees Report
                 </button>

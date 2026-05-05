@@ -8,9 +8,9 @@ export default {
     extend: {
       colors: {
         brand: {
-          orange: '#f97316', // Vibrant Orange
+          blue: '#2563eb',   // Blue 600
           dark: '#1e293b',   // Slate 800
-          accent: '#ea580c', // Darker Orange
+          accent: '#1d4ed8', // Blue 700
         }
       }
     },

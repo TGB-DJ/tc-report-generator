@@ -1,48 +1,63 @@
 // Department options for the college
 export const DEPARTMENTS = {
-    'BSc Computer Science': { degree: 'BSc', maxYears: 3 },
-    'BSc Mathematics': { degree: 'BSc', maxYears: 3 },
-    'BSc Micro Biology': { degree: 'BSc', maxYears: 3 },
-    'BSc Bio Chemistry': { degree: 'BSc', maxYears: 3 },
-    'BSc Chemistry': { degree: 'BSc', maxYears: 3 },
-    'MSc Computer Science': { degree: 'MSc', maxYears: 2 },
-    'MSc Mathematics': { degree: 'MSc', maxYears: 2 },
-    'MSc Micro Biology': { degree: 'MSc', maxYears: 2 },
-    'MSc Bio Chemistry': { degree: 'MSc', maxYears: 2 },
-    'MSc Chemistry': { degree: 'MSc', maxYears: 2 },
-    'BA Tamil': { degree: 'BA', maxYears: 3 },
-    'BA English': { degree: 'BA', maxYears: 3 },
-    'MA Tamil': { degree: 'MA', maxYears: 2 },
-    'MA English': { degree: 'MA', maxYears: 2 },
-    'B.Com': { degree: 'BCom', maxYears: 3 }
+    // Under Graduate
+    'B.Sc. Computer Science': { degree: 'BSc', maxYears: 3 },
+    'B.C.A. Computer Application': { degree: 'BCA', maxYears: 3 },
+    'B.Sc. Microbiology': { degree: 'BSc', maxYears: 3 },
+    'B.Sc. Biochemistry': { degree: 'BSc', maxYears: 3 },
+    'B.Sc. Physics': { degree: 'BSc', maxYears: 3 },
+    'B.Sc. Chemistry': { degree: 'BSc', maxYears: 3 },
+    'B.Sc. Mathematics': { degree: 'BSc', maxYears: 3 },
+    'B.Com. Bank Management': { degree: 'BCom', maxYears: 3 },
+    'B.Com. Commerce': { degree: 'BCom', maxYears: 3 },
+    'B.A. English Literature': { degree: 'BA', maxYears: 3 },
+    'B.A. Tamil': { degree: 'BA', maxYears: 3 },
+    'B.B.A. Business Administration': { degree: 'BBA', maxYears: 3 },
+    'B.Sc. Computer Science with Artificial Intelligence': { degree: 'BSc', maxYears: 3 },
+    'B.Sc. Computer Science with Data Science': { degree: 'BSc', maxYears: 3 },
+
+    // Post Graduate
+    'M.Sc. Computer Science': { degree: 'MSc', maxYears: 2 },
+    'M.Sc. Information Technology': { degree: 'MSc', maxYears: 2 },
+    'M.Sc. Microbiology': { degree: 'MSc', maxYears: 2 },
+    'M.Sc. Biochemistry': { degree: 'MSc', maxYears: 2 },
+    'M.Com. Commerce': { degree: 'MCom', maxYears: 2 },
+    'M.A. Tamil': { degree: 'MA', maxYears: 2 },
+
+    // Research Courses
+    'Ph.D. Microbiology (Full Time)': { degree: 'PhD', maxYears: 3 },
+    'Ph.D. Tamil (Part Time)': { degree: 'PhD', maxYears: 5 }
 };
 
 // Get department categories for grouping
 export const DEPARTMENT_CATEGORIES = {
-    'BSc Programs': [
-        'BSc Computer Science',
-        'BSc Mathematics',
-        'BSc Micro Biology',
-        'BSc Bio Chemistry',
-        'BSc Chemistry'
+    'Under Graduate Courses': [
+        'B.Sc. Computer Science',
+        'B.C.A. Computer Application',
+        'B.Sc. Microbiology',
+        'B.Sc. Biochemistry',
+        'B.Sc. Physics',
+        'B.Sc. Chemistry',
+        'B.Sc. Mathematics',
+        'B.Com. Bank Management',
+        'B.Com. Commerce',
+        'B.A. English Literature',
+        'B.A. Tamil',
+        'B.B.A. Business Administration',
+        'B.Sc. Computer Science with Artificial Intelligence',
+        'B.Sc. Computer Science with Data Science'
     ],
-    'MSc Programs': [
-        'MSc Computer Science',
-        'MSc Mathematics',
-        'MSc Micro Biology',
-        'MSc Bio Chemistry',
-        'MSc Chemistry'
+    'Post Graduate Courses': [
+        'M.Sc. Computer Science',
+        'M.Sc. Information Technology',
+        'M.Sc. Microbiology',
+        'M.Sc. Biochemistry',
+        'M.Com. Commerce',
+        'M.A. Tamil'
     ],
-    'BA Programs': [
-        'BA Tamil',
-        'BA English'
-    ],
-    'MA Programs': [
-        'MA Tamil',
-        'MA English'
-    ],
-    'Commerce': [
-        'B.Com'
+    'Research Courses': [
+        'Ph.D. Microbiology (Full Time)',
+        'Ph.D. Tamil (Part Time)'
     ]
 };
 
@@ -53,7 +68,7 @@ export const getYearOptions = (department) => {
 
     const years = [];
     for (let i = 1; i <= deptInfo.maxYears; i++) {
-        years.push(`${i}${i === 1 ? 'st' : i === 2 ? 'nd' : 'rd'} Year`);
+        years.push(`${i}${i === 1 ? 'st' : i === 2 ? 'nd' : i === 3 ? 'rd' : 'th'} Year`);
     }
     return years;
 };
@@ -88,7 +103,7 @@ export const calculateNextYear = (department, currentYear, admissionDate) => {
     }
 
     // Promote to next year
-    const suffix = nextYearNum === 1 ? 'st' : nextYearNum === 2 ? 'nd' : 'rd';
+    const suffix = nextYearNum === 1 ? 'st' : nextYearNum === 2 ? 'nd' : nextYearNum === 3 ? 'rd' : 'th';
     return {
         year: `${nextYearNum}${suffix} Year`,
         status: 'active'
@@ -96,17 +111,17 @@ export const calculateNextYear = (department, currentYear, admissionDate) => {
 };
 // Simplified Department list for Teachers
 export const TEACHER_DEPARTMENTS = [
-    "Computer Science (CS)",
-    "Mathematics",
+    "Computer Science",
+    "Computer Application",
+    "Microbiology",
+    "Biochemistry",
     "Physics",
     "Chemistry",
-    "Biochemistry",
-    "Microbiology",
-    "Biotechnology",
+    "Mathematics",
+    "Bank Management",
     "Commerce",
-    "English",
+    "English Literature",
     "Tamil",
-    "Business Administration (BBA)",
-    "Economics",
-    "History"
+    "Business Administration",
+    "Information Technology"
 ];

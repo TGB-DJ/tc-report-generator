@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { User, FileText, CheckCircle, AlertCircle, Eye, Bell, X } from 'lucide-react';
+import { User, FileText, CheckCircle, AlertCircle, Eye, Bell, X, Share2, QrCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const StudentDashboard = () => {
@@ -242,13 +242,13 @@ const StudentDashboard = () => {
                                                 <div
                                                     key={notif.id}
                                                     onClick={() => markAsRead(notif)}
-                                                    className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-orange-50/30' : ''}`}
+                                                    className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer group relative ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
                                                 >
                                                     <div className="flex justify-between items-start gap-3">
                                                         <div className="flex-1">
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 {!notif.isRead && (
-                                                                    <span className="w-2 h-2 rounded-full bg-brand-orange"></span>
+                                                                    <span className="w-2 h-2 rounded-full bg-brand-blue"></span>
                                                                 )}
                                                                 <span className="text-xs text-slate-400">{notif.date}</span>
                                                             </div>
@@ -278,26 +278,81 @@ const StudentDashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Profile Card */}
-                <Card className="md:col-span-2">
-                    <div className="flex items-start justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-orange to-orange-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-orange-500/20 overflow-hidden">
-                                {student.photoUrl ? (
-                                    <img src={student.photoUrl} alt="Profile" className="w-full h-full object-cover" />
-                                ) : (
-                                    student.name?.charAt(0)
-                                )}
+                <Card className="md:col-span-2 relative overflow-hidden">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between mb-8 gap-6 pt-4 sm:pt-0">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 w-full">
+                            {/* QR Code Pass */}
+                            <div className="flex-shrink-0 relative group flex flex-col items-center">
+                                <div className="w-32 h-32 bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-md flex items-center justify-center relative z-10 transition-transform hover:scale-105 duration-300">
+                                    <img 
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(JSON.stringify({
+                                            id: student.id || student.uid,
+                                            regno: student.regno,
+                                            name: student.name,
+                                            dept: student.dept,
+                                            class: student.class
+                                        }))}`}
+                                        alt="Student Pass QR" 
+                                        className="w-full h-full object-contain"
+                                        loading="lazy"
+                                    />
+                                </div>
+                                <div className="absolute top-0 w-32 h-32 bg-gradient-to-br from-brand-blue to-blue-500 rounded-2xl blur-xl opacity-20 -z-10 group-hover:opacity-40 transition-opacity duration-300"></div>
+                                <p className="text-[10px] uppercase font-bold text-slate-400 mt-3 tracking-wider bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 text-center">Library / Lab Pass</p>
                             </div>
-                            <div>
-                                <h2 className="text-2xl font-bold text-slate-800">{student.name}</h2>
-                                <p className="text-slate-500">{student.regno}</p>
+                            
+                            <div className="flex-1 text-center sm:text-left mt-2 sm:mt-0">
+                                <div className="flex flex-col sm:flex-row items-center sm:items-start justify-center sm:justify-start gap-4 mb-3">
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-blue to-blue-600 flex flex-shrink-0 items-center justify-center text-white text-xl font-bold shadow-lg shadow-blue-500/20 overflow-hidden border-2 border-white ring-2 ring-blue-50">
+                                        {student.photoUrl ? (
+                                            <img src={student.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                                        ) : (
+                                            student.name?.charAt(0).toUpperCase()
+                                        )}
+                                    </div>
+                                    <div className="pt-1">
+                                        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">{student.name}</h2>
+                                        <p className="text-slate-500 font-medium tracking-wide">{student.regno}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-5">
+                                    <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide border shadow-sm ${student.fees?.balance <= 0
+                                        ? "bg-green-50 text-green-700 border-green-200"
+                                        : "bg-red-50 text-red-700 border-red-200"
+                                        }`}>
+                                        {student.fees?.balance <= 0 ? (
+                                            <span className="flex items-center"><CheckCircle size={14} className="mr-1.5" /> Fees Cleared</span>
+                                        ) : (
+                                            <span className="flex items-center"><AlertCircle size={14} className="mr-1.5" /> Fees Pending</span>
+                                        )}
+                                    </div>
+
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="h-8 text-xs font-semibold px-4 hover:bg-slate-50 shadow-sm"
+                                        onClick={async () => {
+                                            try {
+                                                if (navigator.share) {
+                                                    await navigator.share({
+                                                        title: `${student.name}'s Student Profile`,
+                                                        text: `Student Profile: ${student.name}\nReg No: ${student.regno}\nCourse: ${student.class} - ${student.dept}`,
+                                                        url: window.location.href,
+                                                    });
+                                                } else {
+                                                    alert("Sharing is not supported on this browser or device.");
+                                                }
+                                            } catch (error) {
+                                                console.log("Error sharing:", error);
+                                            }
+                                        }}
+                                    >
+                                        <Share2 size={14} className="mr-1.5" />
+                                        Share Profile
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${student.fees?.balance === 0
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                            }`}>
-                            {student.fees?.balance === 0 ? "Fees Cleared" : "Fees Pending"}
                         </div>
                     </div>
                     <div className="space-y-4">
@@ -328,7 +383,7 @@ const StudentDashboard = () => {
                             </div>
                             <div className="space-y-1">
                                 <p className="text-slate-500 text-xs uppercase tracking-wider">Class / Semester</p>
-                                <p className="font-semibold text-brand-orange">{student.class} / Sem {student.semester || '1'}</p>
+                                <p className="font-semibold text-brand-blue">{student.class} / Sem {student.semester || '1'}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-slate-500 text-xs uppercase tracking-wider">Academic Year</p>
@@ -426,7 +481,7 @@ const StudentDashboard = () => {
                             <h3 className="text-xl font-bold">Fee Details</h3>
                         </div>
                         <select
-                            className="bg-white border border-slate-300 text-sm rounded-lg p-2 focus:ring-brand-orange focus:border-brand-orange"
+                            className="bg-white border border-slate-300 text-sm rounded-lg p-2 focus:ring-brand-blue focus:border-brand-blue"
                             value={selectedSem}
                             onChange={(e) => setSelectedSem(e.target.value)}
                         >
@@ -530,8 +585,8 @@ const StudentDashboard = () => {
 
                                             {/* Bus Fees */}
                                             {Number(student.fees?.busTotal) > 0 && (
-                                                <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
-                                                    <h5 className="font-semibold text-orange-800 mb-2 text-sm">Bus Fees</h5>
+                                                <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                                                    <h5 className="font-semibold text-blue-800 mb-2 text-sm">Bus Fees</h5>
                                                     <div className="grid grid-cols-3 gap-2 text-sm">
                                                         <div>
                                                             <p className="text-slate-500 text-xs">Total</p>
