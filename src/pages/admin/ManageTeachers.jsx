@@ -265,11 +265,22 @@ const ManageTeachers = () => {
                             ) : (
                                 filteredTeachers.map((teacher) => (
                                     <tr key={teacher.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                        <td className="p-4">
-                                            <div className="font-medium text-slate-900">{teacher.name}</div>
-                                            <div className="text-sm text-slate-500">{teacher.email}</div>
-                                            <div className="text-sm text-slate-500">{teacher.phone}</div>
-                                            <div className="text-xs text-slate-400">ID: {teacher.cid}</div>
+                                        <td className="p-4 flex items-start gap-3">
+                                            <img 
+                                                src={teacher.photoUrl || `https://unavatar.io/${teacher.email}?fallback=${encodeURIComponent(`https://ui-avatars.com/api/?name=${teacher.name}&background=3b82f6&color=fff`)}`}
+                                                alt={teacher.name}
+                                                className="w-10 h-10 rounded-full object-cover shadow-sm transition-transform duration-300 hover:scale-110 mt-1"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = `https://ui-avatars.com/api/?name=${teacher.name}&background=3b82f6&color=fff`;
+                                                }}
+                                            />
+                                            <div>
+                                                <div className="font-medium text-slate-900">{teacher.name}</div>
+                                                <div className="text-sm text-slate-500">{teacher.email}</div>
+                                                <div className="text-sm text-slate-500">{teacher.phone}</div>
+                                                <div className="text-xs text-slate-400">ID: {teacher.cid}</div>
+                                            </div>
                                         </td>
                                         <td className="p-4">{teacher.dept}</td>
                                         <td className="p-4">{teacher.qualification}</td>

@@ -12,6 +12,7 @@ const StudentDashboard = () => {
     const { user } = useAuth();
     const [student, setStudent] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('profile');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -285,13 +286,7 @@ const StudentDashboard = () => {
                             <div className="flex-shrink-0 relative group flex flex-col items-center">
                                 <div className="w-32 h-32 bg-white p-2 rounded-2xl border-2 border-slate-100 shadow-md flex items-center justify-center relative z-10 transition-transform hover:scale-105 duration-300">
                                     <img 
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(JSON.stringify({
-                                            id: student.id || student.uid,
-                                            regno: student.regno,
-                                            name: student.name,
-                                            dept: student.dept,
-                                            class: student.class
-                                        }))}`}
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(student.regno)}`}
                                         alt="Student Pass QR" 
                                         className="w-full h-full object-contain"
                                         loading="lazy"
@@ -299,6 +294,7 @@ const StudentDashboard = () => {
                                 </div>
                                 <div className="absolute top-0 w-32 h-32 bg-gradient-to-br from-brand-blue to-blue-500 rounded-2xl blur-xl opacity-20 -z-10 group-hover:opacity-40 transition-opacity duration-300"></div>
                                 <p className="text-[10px] uppercase font-bold text-slate-400 mt-3 tracking-wider bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 text-center">Library / Lab Pass</p>
+                                <p className="text-xs font-mono font-bold text-slate-600 mt-1">{student.regno}</p>
                             </div>
                             
                             <div className="flex-1 text-center sm:text-left mt-2 sm:mt-0">
@@ -355,25 +351,44 @@ const StudentDashboard = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="space-y-4">
-                        <div className="flex justify-between items-center border-t pt-4">
-                            <h3 className="text-xl font-bold">Academic Profile</h3>
-                            <Button variant="outline" size="sm" onClick={() => navigate('/student/marks')}>
-                                <FileText size={16} className="mr-2" />
-                                University Marks
-                            </Button>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
-                            <div className="space-y-1">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider">Register No</p>
-                                <p className="font-semibold text-slate-800">{student.regno}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider">Admission No</p>
-                                <p className="font-semibold text-slate-800">{student.admissionNo || '-'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider">Student Name</p>
+                </Card>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-6 border-b border-slate-200 mb-6 overflow-x-auto no-scrollbar">
+                {['Profile', 'Academic', 'Fees'].map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab.toLowerCase())}
+                        className={`pb-3 px-2 transition-all relative whitespace-nowrap text-sm font-semibold ${
+                            activeTab === tab.toLowerCase()
+                                ? 'text-brand-blue'
+                                : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        {tab}
+                        {activeTab === tab.toLowerCase() && (
+                            <motion.div
+                                layoutId="activeTabIndicator"
+                                className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-blue rounded-t-full"
+                            />
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+                {activeTab === 'profile' && (
+                    <motion.div
+                        key="profile"
+                        initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -10, filter: "blur(8px)" }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <Card className="p-6 space-y-6">
+                            <h3 className="text-xl font-bold border-b border-slate-100 pb-2">Personal Information</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                                 <p className="font-semibold text-slate-800">{student.name}</p>
                             </div>
 
@@ -403,33 +418,43 @@ const StudentDashboard = () => {
                                 <p className="font-semibold text-slate-800">{student.religion} / {student.community}</p>
                             </div>
 
-                            <div className="space-y-1">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider">Father / Guardian</p>
-                                <p className="font-semibold text-slate-800">{student.fatherName || '-'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider">Contact Phone</p>
-                                <p className="font-semibold text-slate-800">{student.phone || '-'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider">Email</p>
-                                <p className="font-semibold text-slate-800">{student.email || '-'}</p>
-                            </div>
+                            {student.fatherName && (
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Father / Guardian</p>
+                                    <p className="font-semibold text-slate-800">{student.fatherName}</p>
+                                </div>
+                            )}
+                            {student.phone && (
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Contact Phone</p>
+                                    <p className="font-semibold text-slate-800">{student.phone}</p>
+                                </div>
+                            )}
+                            {student.email && (
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Email</p>
+                                    <p className="font-semibold text-slate-800">{student.email}</p>
+                                </div>
+                            )}
 
-                            <div className="space-y-1">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider">Aadhar No</p>
-                                <p className="font-semibold text-slate-800">{student.aadharNo || '-'}</p>
-                            </div>
+                            {student.aadharNo && (
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Aadhar No</p>
+                                    <p className="font-semibold text-slate-800">{student.aadharNo}</p>
+                                </div>
+                            )}
                             {student.panNo && (
                                 <div className="space-y-1">
                                     <p className="text-slate-500 text-xs uppercase tracking-wider">PAN No</p>
                                     <p className="font-semibold text-slate-800">{student.panNo}</p>
                                 </div>
                             )}
-                            <div className="space-y-1">
-                                <p className="text-slate-500 text-xs uppercase tracking-wider">Admission Date</p>
-                                <p className="font-semibold text-slate-800">{student.admissionDate || '-'}</p>
-                            </div>
+                            {student.admissionDate && (
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Admission Date</p>
+                                    <p className="font-semibold text-slate-800">{student.admissionDate}</p>
+                                </div>
+                            )}
 
                             {student.address && (
                                 <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-1 pt-2 border-t border-slate-100 mt-2">
@@ -445,16 +470,21 @@ const StudentDashboard = () => {
                                 </div>
                             )}
 
-                            {/* Extended Details Section */}
-                            <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 border-t border-slate-100 mt-2 bg-slate-50/50 p-4 rounded-lg">
-                                <div className="space-y-1">
-                                    <p className="text-slate-500 text-xs uppercase tracking-wider">ABC ID</p>
-                                    <p className="font-semibold text-slate-800">{student.abcId || '-'}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-slate-500 text-xs uppercase tracking-wider">UMIS ID</p>
-                                    <p className="font-semibold text-slate-800">{student.umisId || '-'}</p>
-                                </div>
+                            {/* Additional Information Section */}
+                            {(student.abcId || student.umisId || student.bankName || student.accountNo) && (
+                                <div className="col-span-1 md:col-span-2 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 border-t border-slate-100 mt-2 bg-slate-50/50 p-4 rounded-lg">
+                                    {student.abcId && (
+                                        <div className="space-y-1">
+                                            <p className="text-slate-500 text-xs uppercase tracking-wider">ABC ID</p>
+                                            <p className="font-semibold text-slate-800">{student.abcId}</p>
+                                        </div>
+                                    )}
+                                    {student.umisId && (
+                                        <div className="space-y-1">
+                                            <p className="text-slate-500 text-xs uppercase tracking-wider">UMIS ID</p>
+                                            <p className="font-semibold text-slate-800">{student.umisId}</p>
+                                        </div>
+                                    )}
                                 {(student.bankName || student.accountNo) && (
                                     <div className="space-y-1">
                                         <p className="text-slate-500 text-xs uppercase tracking-wider">Bank Details</p>
@@ -466,13 +496,69 @@ const StudentDashboard = () => {
                                         </div>
                                     </div>
                                 )}
-                            </div>
-                        </div>
-                    </div>
-                </Card>
+                                </div>
+                            )}
+                        </Card>
+                    </motion.div>
+                )}
 
-                {/* Fee Status Card */}
-                <Card className={isClear ? "border-green-200 bg-green-50/50" : "border-red-200 bg-red-50/50"}>
+                {activeTab === 'academic' && (
+                    <motion.div
+                        key="academic"
+                        initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -10, filter: "blur(8px)" }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <Card className="p-6 space-y-6">
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                                <h3 className="text-xl font-bold">Academic Profile</h3>
+                                <Button variant="outline" size="sm" onClick={() => navigate('/student/marks')}>
+                                    <FileText size={16} className="mr-2" />
+                                    University Marks
+                                </Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Register No</p>
+                                    <p className="font-semibold text-slate-800">{student.regno}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Admission No</p>
+                                    <p className="font-semibold text-slate-800">{student.admissionNo || '-'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Department</p>
+                                    <p className="font-semibold text-slate-800">{student.dept}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Class / Semester</p>
+                                    <p className="font-semibold text-brand-blue">{student.class} / Sem {student.semester || '1'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-slate-500 text-xs uppercase tracking-wider">Academic Year</p>
+                                    <p className="font-semibold text-slate-800">{student.academicYear || '-'}</p>
+                                </div>
+                                {student.admissionDate && (
+                                    <div className="space-y-1">
+                                        <p className="text-slate-500 text-xs uppercase tracking-wider">Admission Date</p>
+                                        <p className="font-semibold text-slate-800">{student.admissionDate}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    </motion.div>
+                )}
+
+                {activeTab === 'fees' && (
+                    <motion.div
+                        key="fees"
+                        initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
+                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                        exit={{ opacity: 0, y: -10, filter: "blur(8px)" }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <Card className={isClear ? "border-green-200 bg-green-50/50" : "border-red-200 bg-red-50/50"}>
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center gap-4">
                             <div className={`p-3 rounded-full ${isClear ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
@@ -625,8 +711,10 @@ const StudentDashboard = () => {
                             No fee records found for Semester {selectedSem}.
                         </div>
                     )}
-                </Card>
-            </div>
+                        </Card>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

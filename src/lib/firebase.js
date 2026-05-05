@@ -13,9 +13,11 @@ const firebaseConfig = {
 };
 
 import { initializeFirestore } from "firebase/firestore";
+import { getMessaging } from "firebase/messaging";
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 export const storage = getStorage(app);
+export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
 export default app;

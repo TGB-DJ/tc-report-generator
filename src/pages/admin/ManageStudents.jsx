@@ -10,8 +10,9 @@ import StudentFeesForm from '../../components/StudentFeesForm';
 import MonthlyTestForm from '../../components/MonthlyTestForm';
 import FeePaymentInput from '../../components/FeePaymentInput';
 import Toast from '../../components/ui/Toast';
+import ExpandableSearch from '../../components/ui/ExpandableSearch';
 import { Trash2, Plus, Filter, X, Pencil, Printer, Eye, RefreshCw } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { DEPARTMENT_CATEGORIES, getYearOptions } from '../../constants/departments';
 import { RELIGIONS, COMMUNITIES } from '../../constants/studentData';
 import BulkTCPrintModal from '../../components/BulkTCPrintModal';
@@ -33,6 +34,7 @@ const ManageStudents = () => {
     // Filters State
     const [showFilters, setShowFilters] = useState(false);
     const [statusFilter, setStatusFilter] = useState(STUDENT_STATUS.CURRENT); // NEW: 'current' or 'alumni'
+    const [searchQuery, setSearchQuery] = useState('');
     const [filters, setFilters] = useState({
         dept: '',
         class: '',
@@ -94,6 +96,19 @@ const ManageStudents = () => {
         }
     };
 
+    // Helper to check if student matches search
+    const matchesSearch = (student, query) => {
+        if (!query) return true;
+        const lowerQuery = query.toLowerCase();
+        return (
+            student.name?.toLowerCase().includes(lowerQuery) ||
+            student.regno?.toLowerCase().includes(lowerQuery) ||
+            student.phone?.toLowerCase().includes(lowerQuery) ||
+            student.class?.toLowerCase().includes(lowerQuery) ||
+            student.dept?.toLowerCase().includes(lowerQuery)
+        );
+    };
+
     useEffect(() => {
         let result = students;
 
@@ -119,8 +134,13 @@ const ManageStudents = () => {
             result = result.filter(s => s.academicYear === filters.academicYear);
         }
 
+        // 5. Search Query
+        if (searchQuery) {
+            result = result.filter(s => matchesSearch(s, searchQuery));
+        }
+
         setFilteredStudents(result);
-    }, [students, filters, statusFilter]);
+    }, [students, filters, statusFilter, searchQuery]);
 
     const resetForm = () => {
         setFormData({
@@ -294,8 +314,18 @@ const ManageStudents = () => {
                 return sum + (sem.payments || []).reduce((pSum, p) => pSum + (Number(p.amount) || 0), 0);
             }, 0);
 
-            const grandTotal = regTotal + semTotal;
-            const grandPaid = regPaid + semPaid;
+            // Bus
+            const busTotal = Number(feesObj.busFee?.total) || 0;
+            const busPaid = (feesObj.busFee?.payments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+            // Other
+            const otherTotal = (feesObj.otherFees || []).reduce((sum, f) => sum + (Number(f.total) || 0), 0);
+            const otherPaid = (feesObj.otherFees || []).reduce((sum, f) => {
+                return sum + (f.payments || []).reduce((pSum, p) => pSum + (Number(p.amount) || 0), 0);
+            }, 0);
+
+            const grandTotal = regTotal + semTotal + busTotal + otherTotal;
+            const grandPaid = regPaid + semPaid + busPaid + otherPaid;
             const grandBalance = grandTotal - grandPaid;
 
             // Base Student Data
@@ -339,18 +369,12 @@ const ManageStudents = () => {
                 leavingDate: formData.leavingDate,
                 fees: {
                     ...feesObj,
-                    total: grandTotal,
-                    paid: grandPaid,
-                    balance: grandBalance,
-                    // Keep old fields for safety if needed, or zero them
-                    busTotal: 0,
-                    busPaid: 0,
-                    busBalance: 0,
-                    total: formData.feesTotal || 0,
-                    busTotal: formData.feesBusTotal || 0,
-                    paid: formData.feesPaid || 0,
-                    busPaid: formData.feesBus || 0,
-                    balance: (formData.feesTotal || 0) + (formData.feesBusTotal || 0) - ((formData.feesPaid || 0) + (formData.feesBus || 0)),
+                    total: grandTotal || 0,
+                    paid: grandPaid || 0,
+                    balance: grandBalance || 0,
+                    busTotal: busTotal || 0,
+                    busPaid: busPaid || 0,
+                    busBalance: busTotal - busPaid,
                     payments: formData.feePayments || [],
                     busPayments: formData.busPayments || [],
                     otherPayments: formData.otherPayments || []
@@ -607,25 +631,40 @@ const ManageStudents = () => {
                         </button>
                     </div>
 
-                    <button
-                        onClick={() => setShowFilters(prev => !prev)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-                            showFilters
-                                ? 'bg-brand-blue text-white border-brand-blue'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-brand-blue hover:text-brand-blue'
-                        }`}
-                    >
-                        <Filter size={18} />
-                        <span className="font-medium">Filters</span>
-                        {(filters.dept || filters.class || filters.academicYear) && (
-                            <span className="w-2 h-2 rounded-full bg-red-400 ml-1"></span>
-                        )}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <ExpandableSearch 
+                            value={searchQuery}
+                            onChange={setSearchQuery}
+                            placeholder="Search name, reg, phone..."
+                        />
+                        <button
+                            onClick={() => setShowFilters(prev => !prev)}
+                            className={`flex items-center gap-2 px-4 py-2 h-10 rounded-full border transition-all ${
+                                showFilters
+                                    ? 'bg-brand-blue text-white border-brand-blue'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-brand-blue hover:text-brand-blue'
+                            }`}
+                        >
+                            <Filter size={18} />
+                            <span className="font-medium hidden sm:inline">Filters</span>
+                            {(filters.dept || filters.class || filters.academicYear) && (
+                                <span className="w-2 h-2 rounded-full bg-red-400 ml-1"></span>
+                            )}
+                        </button>
+                    </div>
                 </div>
 
-                {showFilters && (
-                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <AnimatePresence>
+                    {showFilters && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <Select
                                 label="Department"
                                 value={filters.dept}
@@ -674,8 +713,10 @@ const ManageStudents = () => {
                                 Update Fees
                             </Button>
                         </div>
-                    </div>
-                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </Card>
 
             <Card className="overflow-hidden p-0">
@@ -721,9 +762,15 @@ const ManageStudents = () => {
                                         <td className="p-4">{student.regno}</td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-blue to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                                                    {student.name?.charAt(0).toUpperCase()}
-                                                </div>
+                                                <img 
+                                                    src={student.photoUrl || `https://unavatar.io/${student.email}?fallback=${encodeURIComponent(`https://ui-avatars.com/api/?name=${student.name}&background=3b82f6&color=fff`)}`}
+                                                    alt={student.name}
+                                                    className="w-10 h-10 rounded-full object-cover shadow-sm transition-transform duration-300 hover:scale-110"
+                                                    onError={(e) => {
+                                                        e.target.onerror = null;
+                                                        e.target.src = `https://ui-avatars.com/api/?name=${student.name}&background=3b82f6&color=fff`;
+                                                    }}
+                                                />
                                                 <span className="font-medium">{student.name}</span>
                                             </div>
                                         </td>
@@ -823,17 +870,13 @@ const ManageStudents = () => {
                                             <div className="flex-shrink-0 relative group flex flex-col items-center pl-4 border-l border-slate-100">
                                                 <div className="w-24 h-24 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
                                                     <img 
-                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(JSON.stringify({
-                                                            id: editingStudent.id,
-                                                            regno: editingStudent.regno,
-                                                            name: editingStudent.name,
-                                                            class: editingStudent.class
-                                                        }))}`}
+                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(editingStudent.regno)}`}
                                                         alt="Student Pass QR" 
                                                         className="w-full h-full object-contain"
                                                     />
                                                 </div>
                                                 <p className="text-[10px] uppercase font-bold text-slate-400 mt-1.5 tracking-wide text-center">Library / Lab Pass</p>
+                                                <p className="text-xs font-mono font-bold text-slate-600 mt-0.5">{editingStudent.regno}</p>
                                             </div>
                                         )}
                                     </div>
@@ -889,7 +932,7 @@ const ManageStudents = () => {
                                         </div>
 
                                         <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-t border-slate-100 pt-4 mt-2">
-                                            <h5 className="md:col-span-2 lg:col-span-3 font-semibold text-slate-700">Extended Details</h5>
+                                            <h5 className="md:col-span-2 lg:col-span-3 font-semibold text-slate-700">Additional Information</h5>
                                             <Input name="abcId" label="ABC ID" value={formData.abcId} onChange={handleInputChange} autoComplete="off" />
                                             <Input name="umisId" label="UMIS ID" value={formData.umisId} onChange={handleInputChange} autoComplete="off" />
                                             <div className="hidden lg:block"></div>
@@ -974,11 +1017,35 @@ const ManageStudents = () => {
                                     <Button type="button" variant="ghost" onClick={() => { setIsModalOpen(false); resetForm(); }}>
                                         {isViewOnly ? 'Close' : 'Cancel'}
                                     </Button>
-                                    {!isViewOnly && (
-                                        <Button type="submit" isLoading={formLoading}>
-                                            {editingStudent ? 'Update Student' : 'Create Student'}
-                                        </Button>
-                                    )}
+                                    {(() => {
+                                        const isFormValid = Boolean(
+                                            formData.firstName &&
+                                            formData.lastName &&
+                                            formData.fatherName &&
+                                            formData.regno &&
+                                            formData.admissionNo &&
+                                            formData.phone &&
+                                            formData.email &&
+                                            (editingStudent || formData.password) &&
+                                            formData.nationality &&
+                                            formData.gender &&
+                                            formData.religion &&
+                                            formData.dept &&
+                                            formData.class &&
+                                            formData.semester &&
+                                            formData.dob &&
+                                            formData.admissionDate &&
+                                            formData.academicYear &&
+                                            formData.promotion &&
+                                            formData.conduct
+                                        );
+
+                                        return !isViewOnly && isFormValid && (
+                                            <Button type="submit" isLoading={formLoading}>
+                                                {editingStudent ? 'Update Student' : 'Create Student'}
+                                            </Button>
+                                        );
+                                    })()}
                                 </div>
                             </form>
                         </motion.div>

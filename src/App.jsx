@@ -7,6 +7,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import ManageStudents from "./pages/admin/ManageStudents";
 import ManageTeachers from "./pages/admin/ManageTeachers";
 import ManageEvents from "./pages/admin/ManageEvents";
+import ManageNotifications from "./pages/admin/ManageNotifications";
 import ManageAdmins from "./pages/admin/ManageAdmins";
 import Reports from "./pages/admin/Reports";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/admin/students" element={<ManageStudents />} />
                 <Route path="/admin/teachers" element={<ManageTeachers />} />
                 <Route path="/admin/events" element={<ManageEvents />} />
+                <Route path="/admin/notifications" element={<ManageNotifications />} />
               </Route>
             </Route>
 

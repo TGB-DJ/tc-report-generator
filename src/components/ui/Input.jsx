@@ -6,6 +6,7 @@ const Input = ({ label, error, className, ...props }) => {
             {label && (
                 <label className="block text-sm font-medium text-slate-700">
                     {label}
+                    {props.required && <span className="text-red-500 ml-1">*</span>}
                 </label>
             )}
             <input

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Menu, X, Home, Users, GraduationCap, FileText, Settings, ClipboardCheck } from 'lucide-react';
+import { LogOut, Menu, X, Home, Users, GraduationCap, FileText, Settings, ClipboardCheck, Sun, Moon, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
 
@@ -55,6 +55,24 @@ const Layout = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(true); // Default collapsed
 
+    // Theme state
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        return document.documentElement.classList.contains('dark') || 
+               localStorage.getItem('theme') === 'dark';
+    });
+
+    useEffect(() => {
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [isDarkMode]);
+
+    const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
     const isTeacherLayout = userData?.role === 'teacher'; // HOD gets full sidebar now
 
     const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -69,6 +87,7 @@ const Layout = () => {
                         <SidebarLink to="/admin/students" icon={GraduationCap} label="Students" {...commonProps} />
                         <SidebarLink to="/admin/teachers" icon={Users} label="Teachers" {...commonProps} />
                         <SidebarLink to="/admin/events" icon={FileText} label="Events" {...commonProps} />
+
                         {(userData?.isSuperAdmin || userData?.email === 'chirenjeevi7616@gmail.com') && (
                             <SidebarLink to="/admin/admins" icon={Settings} label="Admins" {...commonProps} />
                         )}
@@ -96,7 +115,6 @@ const Layout = () => {
                 return (
                     <>
                         <SidebarLink to="/student" icon={Home} label="Dashboard" {...commonProps} />
-                        <SidebarLink to="/student/tc" icon={FileText} label="TC Format" {...commonProps} />
                     </>
                 );
             default:
@@ -105,7 +123,7 @@ const Layout = () => {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50">
+        <div className="flex h-screen bg-slate-50 dark:bg-black">
             {/* Mobile Overlay */}
             <AnimatePresence>
                 {!isTeacherLayout && isMobileMenuOpen && (
@@ -128,7 +146,7 @@ const Layout = () => {
                     onMouseEnter={() => setSidebarCollapsed(false)}
                     onMouseLeave={() => setSidebarCollapsed(true)}
                     className={clsx(
-                        "fixed lg:static inset-y-0 left-0 z-50 bg-white/80 backdrop-blur-xl border-r border-slate-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-hidden",
+                        "fixed lg:static inset-y-0 left-0 z-50 bg-white/80 dark:bg-[#0a0a0a]/95 backdrop-blur-xl border-r border-slate-200 dark:border-white/10 transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-hidden",
                         isMobileMenuOpen ? "translate-x-0 w-64" : "-translate-x-full"
                     )}
                 >
@@ -165,7 +183,7 @@ const Layout = () => {
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
-                                        className="mb-4 px-4 py-3 bg-slate-50 rounded-xl text-center border border-slate-100 whitespace-nowrap overflow-hidden"
+                                        className="mb-4 px-4 py-3 bg-slate-50 dark:bg-[#111111] rounded-xl text-center border border-slate-100 dark:border-white/5 whitespace-nowrap overflow-hidden"
                                     >
                                         <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Powered By</p>
                                         <div className="flex items-center justify-center gap-1.5">
@@ -185,9 +203,36 @@ const Layout = () => {
                             </AnimatePresence>
 
                             <button
+                                onClick={toggleTheme}
+                                className={clsx(
+                                    "flex items-center gap-3 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-[#171717] hover:text-brand-blue dark:hover:text-brand-blue transition-colors w-full group overflow-hidden mb-2",
+                                    isSidebarCollapsed ? "justify-center px-0" : "px-4"
+                                )}
+                                title={isSidebarCollapsed ? (isDarkMode ? "Light Mode" : "Dark Mode") : ""}
+                            >
+                                {isDarkMode ? (
+                                    <Sun size={20} className="flex-shrink-0 group-hover:text-amber-500 transition-colors text-slate-500" />
+                                ) : (
+                                    <Moon size={20} className="flex-shrink-0 group-hover:text-brand-blue transition-colors text-slate-500" />
+                                )}
+                                <AnimatePresence>
+                                    {!isSidebarCollapsed && (
+                                        <motion.span
+                                            initial={{ opacity: 0, width: 0 }}
+                                            animate={{ opacity: 1, width: "auto" }}
+                                            exit={{ opacity: 0, width: 0 }}
+                                            className="font-medium whitespace-nowrap"
+                                        >
+                                            {isDarkMode ? "Light Mode" : "Dark Mode"}
+                                        </motion.span>
+                                    )}
+                                </AnimatePresence>
+                            </button>
+
+                            <button
                                 onClick={logout}
                                 className={clsx(
-                                    "flex items-center gap-3 py-3 rounded-xl text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors w-full group overflow-hidden",
+                                    "flex items-center gap-3 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors w-full group overflow-hidden",
                                     isSidebarCollapsed ? "justify-center px-0" : "px-4"
                                 )}
                                 title={isSidebarCollapsed ? "Logout" : ""}
@@ -213,7 +258,7 @@ const Layout = () => {
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <header className="h-16 border-b border-slate-200 bg-white/50 backdrop-blur-md flex items-center justify-between px-6 lg:px-8">
+                <header className="h-16 border-b border-slate-200 dark:border-white/10 bg-white/50 dark:bg-[#0a0a0a]/90 backdrop-blur-md flex items-center justify-between px-6 lg:px-8">
                     {isTeacherLayout ? (
                         <div className="flex items-center gap-3">
                             <img src="/ksk-logo.jpg" alt="College Logo" className="w-10 h-10 object-contain rounded-md" />
@@ -223,7 +268,7 @@ const Layout = () => {
                             </div>
                         </div>
                     ) : (
-                        <button onClick={toggleMenu} className="lg:hidden p-2 text-slate-600 rounded-lg hover:bg-slate-100">
+                        <button onClick={toggleMenu} className="lg:hidden p-2 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-100 dark:hover:bg-[#171717]">
                             <Menu size={24} />
                         </button>
                     )}
@@ -232,7 +277,7 @@ const Layout = () => {
                         {isTeacherLayout && (
                             <button
                                 onClick={logout}
-                                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors mr-2"
+                                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors mr-2"
                             >
                                 <LogOut size={18} />
                                 <span className="hidden sm:inline">Logout</span>
