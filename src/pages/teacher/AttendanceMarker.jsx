@@ -8,6 +8,7 @@ import Input from '../../components/ui/Input';
 import Select from '../../components/Select';
 import Toast from '../../components/ui/Toast';
 import { Users, Save, CheckCircle, XCircle } from 'lucide-react';
+import clsx from 'clsx';
 
 const AttendanceMarker = () => {
     const { userData, user } = useAuth(); // userData contains teacher profile
@@ -21,9 +22,16 @@ const AttendanceMarker = () => {
         date: new Date().toISOString().split('T')[0],
         type: 'Daily', // Daily or Hourly
         period: '1', // 1-6
-        class: '',
-        dept: ''
+        class: '1st Year',
+        dept: userData?.dept || ''
     });
+
+    // Auto-fill dept from userData when it loads
+    useEffect(() => {
+        if (userData?.dept && !config.dept) {
+            setConfig(prev => ({ ...prev, dept: userData.dept }));
+        }
+    }, [userData]);
 
     const [attendanceData, setAttendanceData] = useState({});
 
@@ -36,10 +44,19 @@ const AttendanceMarker = () => {
 
         setLoading(true);
         try {
+            // Find all valid full department names for this teacher/config
+            const { DEPARTMENTS } = await import('../../constants/departments');
+            const coreSubject = config.dept.split('(')[0].trim().toLowerCase();
+            const validDepts = Object.keys(DEPARTMENTS).filter(d => 
+                d.toLowerCase().includes(coreSubject)
+            );
+            const searchDepts = Array.from(new Set([...validDepts, config.dept]));
+
+            // Query by Class and the matching Departments
             const q = query(
                 collection(db, "students"),
                 where("class", "==", config.class),
-                where("dept", "==", config.dept)
+                where("dept", "in", searchDepts.slice(0, 30))
             );
             const snapshot = await getDocs(q);
             let studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -146,10 +163,16 @@ const AttendanceMarker = () => {
                             <label className="block text-sm font-medium text-slate-700 mb-1">Department</label>
                             <input 
                                 type="text"
-                                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-blue outline-none"
+                                className={clsx(
+                                    "w-full px-3 py-2 border rounded-lg outline-none transition-all",
+                                    (userData?.role === 'teacher' || userData?.role === 'hod') && !userData?.isSuperAdmin
+                                        ? "bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed"
+                                        : "bg-white border-slate-300 text-slate-700 focus:ring-2 focus:ring-brand-blue"
+                                )}
                                 placeholder="e.g. Computer Science"
                                 value={config.dept}
                                 onChange={(e) => setConfig({ ...config, dept: e.target.value })}
+                                disabled={(userData?.role === 'teacher' || userData?.role === 'hod') && !userData?.isSuperAdmin}
                             />
                         </div>
                     </div>

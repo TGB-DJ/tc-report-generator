@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -11,8 +12,9 @@ import MonthlyTestForm from '../../components/MonthlyTestForm';
 import FeePaymentInput from '../../components/FeePaymentInput';
 import Toast from '../../components/ui/Toast';
 import ExpandableSearch from '../../components/ui/ExpandableSearch';
-import { Trash2, Plus, Filter, X, Pencil, Printer, Eye, RefreshCw } from 'lucide-react';
+import { Trash2, Plus, Filter, X, Pencil, Printer, Eye, RefreshCw, Mail } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import clsx from 'clsx';
 import { DEPARTMENT_CATEGORIES, getYearOptions } from '../../constants/departments';
 import { RELIGIONS, COMMUNITIES } from '../../constants/studentData';
 import BulkTCPrintModal from '../../components/BulkTCPrintModal';
@@ -29,7 +31,8 @@ const ManageStudents = () => {
     const [filteredStudents, setFilteredStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [formLoading, setFormLoading] = useState(false);
-    const { createUser } = useAuth(); // Assuming createUser is exposed in AuthContext for admin actions
+    const { createUser, userData } = useAuth();
+    const isSuperAdmin = userData?.isSuperAdmin; // Assuming createUser is exposed in AuthContext for admin actions
 
     // Filters State
     const [showFilters, setShowFilters] = useState(false);
@@ -248,6 +251,66 @@ const ManageStudents = () => {
         }
     };
 
+    // Resend Welcome Email to Student
+    const resendEmail = async (student) => {
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzeVzlm2FFl1HqqGBc-g3odk3JrmTCazspRB6HztKfdECq97OB9AtNwZ-AQdneyH8/exec";
+        if (!student.email) {
+            setFormError("This student has no email address on file.");
+            setTimeout(() => setFormError(''), 3000);
+            return;
+        }
+        try {
+            const htmlTemplate = `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; border-radius: 12px;">
+                    <div style="background-color: #2563eb; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Welcome to Our College!</h1>
+                        <p style="color: #bfdbfe; margin-top: 10px; font-size: 16px;">We are thrilled to have you join us.</p>
+                    </div>
+                    <div style="background-color: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <h2 style="color: #1e293b; margin-top: 0;">Hello ${student.name || 'Student'},</h2>
+                        <p style="color: #475569; line-height: 1.6; font-size: 16px;">
+                            Your admission has been successfully processed for the <strong>${student.dept || ''}</strong> department.
+                        </p>
+                        <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                            <h3 style="color: #0f172a; margin-top: 0; font-size: 18px; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px;">Access Credentials</h3>
+                            <p style="margin: 10px 0; color: #334155;"><strong>Login ID / Register No:</strong> ${student.regno || 'N/A'}</p>
+                            ${student.password ? `<p style="margin: 10px 0; color: #334155;"><strong>Default Password:</strong> ${student.password}</p>` : ''}
+                            <p style="margin: 10px 0; color: #334155;"><strong>Admission/Joining Date:</strong> ${student.admissionDate || 'N/A'}</p>
+                            <p style="margin: 10px 0; color: #334155;"><strong>Department:</strong> ${student.dept || 'N/A'}</p>
+                        </div>
+                        <p style="color: #475569; line-height: 1.6; font-size: 16px;">
+                            You can login using your <b>Register Number</b> or your <b>Registered Email</b> (${student.email}).
+                        </p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${window.location.origin}/login" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">Access Student Portal</a>
+                        </div>
+                        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+                        <p style="color: #94a3b8; font-size: 14px; text-align: center; margin: 0;">
+                            If you have any questions, please contact the administration office.<br/>
+                            &copy; ${new Date().getFullYear()} College Management System
+                        </p>
+                    </div>
+                </div>
+            `;
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: student.email,
+                    subject: "Welcome to " + (student.dept || 'Our College') + " - Your Login Credentials",
+                    html: htmlTemplate
+                })
+            });
+            setSuccessMessage("Welcome email resent to " + student.email);
+            setTimeout(() => setSuccessMessage(''), 4000);
+        } catch (err) {
+            console.error("Resend email error:", err);
+            setFormError("Failed to resend email. Please try again.");
+            setTimeout(() => setFormError(''), 3000);
+        }
+    };
+
     // NEW: Fix Student Data Logic
     const handleFixData = async () => {
         if (!window.confirm("This will scan for students misplaced as admins. Continue?")) return;
@@ -381,29 +444,107 @@ const ManageStudents = () => {
                 },
                 academicRecords: formData.academicRecords || { universityExams: [], monthlyTests: {} },
                 updatedAt: new Date().toISOString(),
+                photoUrl: editingStudent?.photoUrl || null
             };
 
             if (editingStudent) {
+                // If a new photo is selected, upload it first
+                if (photoFile) {
+                    const storageRef = ref(storage, `students/${editingStudent.id}/profile.jpg`);
+                    await uploadBytes(storageRef, photoFile);
+                    studentData.photoUrl = await getDownloadURL(storageRef);
+                }
+
                 const studentRef = doc(db, "students", editingStudent.id);
                 await updateDoc(studentRef, studentData);
 
-                // Update User Mapping if email/phone changed
+                // Update User Mapping
                 const userRef = doc(db, "users", editingStudent.id);
                 await updateDoc(userRef, {
                     name: studentData.name,
                     email: studentData.email,
                     phone: studentData.phone,
-                    // Only update password in users collection if provided? 
-                    // Ideally auth update happens via cloud function or client SDK re-auth, but here we just update the doc.
+                    photoUrl: studentData.photoUrl // Sync photo to user mapping
                 });
 
                 setSuccessMessage("Student updated successfully.");
             } else {
                 // Create
-                // Use computed password (either entered or default DOB)
                 if (!passwordToUse) throw new Error("Password is required (or DOB for default).");
 
-                await createUser(formData.email, passwordToUse, 'student', studentData);
+                const newStudentId = await createUser(formData.email, passwordToUse, 'student', studentData);
+
+                // If photo selected for new student, upload it now that we have the UID
+                if (photoFile && newStudentId) {
+                    const storageRef = ref(storage, `students/${newStudentId}/profile.jpg`);
+                    await uploadBytes(storageRef, photoFile);
+                    const photoUrl = await getDownloadURL(storageRef);
+                    
+                    // Update the newly created documents with the photoUrl
+                    await updateDoc(doc(db, "students", newStudentId), { photoUrl });
+                    await updateDoc(doc(db, "users", newStudentId), { photoUrl });
+                }
+
+                // FREE ALTERNATIVE: GOOGLE APPS SCRIPT WEB APP
+                try {
+                    // This uses a 100% free Google Apps Script to send emails via your Gmail account.
+                    // See the instructions provided in the chat to set this up.
+                    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzeVzlm2FFl1HqqGBc-g3odk3JrmTCazspRB6HztKfdECq97OB9AtNwZ-AQdneyH8/exec";
+
+                    const htmlTemplate = `
+                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; border-radius: 12px;">
+                            <div style="background-color: #2563eb; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+                                <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Welcome to Our College!</h1>
+                                <p style="color: #bfdbfe; margin-top: 10px; font-size: 16px;">We are thrilled to have you join us.</p>
+                            </div>
+                            <div style="background-color: #ffffff; padding: 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                                <h2 style="color: #1e293b; margin-top: 0;">Hello ${formData.firstName},</h2>
+                                <p style="color: #475569; line-height: 1.6; font-size: 16px;">
+                                    Your admission has been successfully processed for the <strong>${formData.dept}</strong> department.
+                                </p>
+                                <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                                    <h3 style="color: #0f172a; margin-top: 0; font-size: 18px; border-bottom: 2px solid #cbd5e1; padding-bottom: 10px;">Access Credentials</h3>
+                                    <p style="margin: 10px 0; color: #334155;"><strong>Login ID / Register No:</strong> ${formData.regno || 'N/A'}</p>
+                                    <p style="margin: 10px 0; color: #334155;"><strong>Default Password:</strong> ${passwordToUse}</p>
+                                    <p style="margin: 10px 0; color: #334155;"><strong>Admission/Joining Date:</strong> ${formData.admissionDate || 'N/A'}</p>
+                                    <p style="margin: 10px 0; color: #334155;"><strong>Department:</strong> ${formData.dept}</p>
+                                </div>
+                                <p style="color: #475569; line-height: 1.6; font-size: 16px;">
+                                    You can login using your <b>Register Number</b> or your <b>Registered Email</b> (${formData.email}).
+                                </p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${window.location.origin}/login" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">Access Student Portal</a>
+                                </div>
+                                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+                                <p style="color: #94a3b8; font-size: 14px; text-align: center; margin: 0;">
+                                    If you have any questions, please contact the administration office.<br/>
+                                    &copy; ${new Date().getFullYear()} College Management System
+                                </p>
+                            </div>
+                        </div>
+                    `;
+
+                    if (GOOGLE_SCRIPT_URL !== "YOUR_GOOGLE_SCRIPT_URL") {
+                        await fetch(GOOGLE_SCRIPT_URL, {
+                            method: 'POST',
+                            mode: 'no-cors', // Important for avoiding CORS issues with Apps Script
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                to: formData.email,
+                                subject: "Welcome to " + formData.dept + " - Your Login Credentials",
+                                html: htmlTemplate
+                            })
+                        });
+                        console.log("Welcome email sent via Google Apps Script.");
+                    } else {
+                        console.warn("Google Script URL not configured. Skipping email.");
+                    }
+                } catch (emailError) {
+                    console.error("Failed to send email via Google Apps Script:", emailError);
+                }
+
                 setSuccessMessage("Student created successfully.");
             }
 
@@ -578,7 +719,7 @@ const ManageStudents = () => {
 
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 pb-20">
             {/* Success Toast */}
             {successMessage && (
                 <Toast
@@ -589,7 +730,7 @@ const ManageStudents = () => {
             )}
 
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-slate-800">Manage Students</h2>
+                <h2 className={clsx("text-2xl font-bold", isSuperAdmin ? "" : "text-slate-800")}>Manage Students</h2>
                 <div className="flex gap-2">
                     {selectedStudents.length > 0 && (
                         <Button onClick={handleBulkPrint} variant="secondary">
@@ -607,25 +748,29 @@ const ManageStudents = () => {
             </div>
 
             {/* Filter Section */}
-            <Card className="p-4">
+            <Card className={isSuperAdmin ? "card-bg p-4" : "p-4"}>
                 <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
                     {/* Status Tabs */}
-                    <div className="bg-slate-100 p-1 rounded-lg inline-flex">
+                    <div className={clsx("p-1 rounded-lg inline-flex", isSuperAdmin ? "bg-black/40" : "bg-slate-100")}>
                         <button
                             onClick={() => setStatusFilter(STUDENT_STATUS.CURRENT)}
-                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${statusFilter === STUDENT_STATUS.CURRENT
-                                ? 'bg-white text-brand-blue shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
-                                }`}
+                            className={clsx(
+                                "px-4 py-2 text-sm font-medium rounded-md transition-all",
+                                statusFilter === STUDENT_STATUS.CURRENT
+                                    ? (isSuperAdmin ? 'bg-amber-600 text-white shadow-lg' : 'bg-white text-brand-blue shadow-sm')
+                                    : (isSuperAdmin ? 'text-amber-500/60 hover:text-amber-500' : 'text-slate-500 hover:text-slate-700')
+                            )}
                         >
                             Current Students
                         </button>
                         <button
                             onClick={() => setStatusFilter(STUDENT_STATUS.ALUMNI)}
-                            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${statusFilter === STUDENT_STATUS.ALUMNI
-                                ? 'bg-white text-brand-blue shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
-                                }`}
+                            className={clsx(
+                                "px-4 py-2 text-sm font-medium rounded-md transition-all",
+                                statusFilter === STUDENT_STATUS.ALUMNI
+                                    ? (isSuperAdmin ? 'bg-amber-600 text-white shadow-lg' : 'bg-white text-brand-blue shadow-sm')
+                                    : (isSuperAdmin ? 'text-amber-500/60 hover:text-amber-500' : 'text-slate-500 hover:text-slate-700')
+                            )}
                         >
                             Alumni
                         </button>
@@ -639,16 +784,17 @@ const ManageStudents = () => {
                         />
                         <button
                             onClick={() => setShowFilters(prev => !prev)}
-                            className={`flex items-center gap-2 px-4 py-2 h-10 rounded-full border transition-all ${
+                            className={clsx(
+                                "flex items-center gap-2 px-4 py-2 h-10 rounded-full border transition-all",
                                 showFilters
-                                    ? 'bg-brand-blue text-white border-brand-blue'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:border-brand-blue hover:text-brand-blue'
-                            }`}
+                                    ? (isSuperAdmin ? 'bg-amber-600 text-white border-amber-500 shadow-lg' : 'bg-brand-blue text-white border-brand-blue')
+                                    : (isSuperAdmin ? 'bg-black/20 text-amber-500 border-amber-500/30 hover:border-amber-500 hover:text-amber-400' : 'bg-white text-slate-600 border-slate-200 hover:border-brand-blue hover:text-brand-blue')
+                            )}
                         >
                             <Filter size={18} />
                             <span className="font-medium hidden sm:inline">Filters</span>
                             {(filters.dept || filters.class || filters.academicYear) && (
-                                <span className="w-2 h-2 rounded-full bg-red-400 ml-1"></span>
+                                <span className={clsx("w-2 h-2 rounded-full ml-1", isSuperAdmin ? "bg-amber-400" : "bg-red-400")}></span>
                             )}
                         </button>
                     </div>
@@ -719,26 +865,26 @@ const ManageStudents = () => {
                 </AnimatePresence>
             </Card>
 
-            <Card className="overflow-hidden p-0">
+            <Card className={clsx("overflow-hidden p-0 border-none", isSuperAdmin ? "card-bg shadow-2xl" : "shadow-md")}>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b border-slate-100">
+                        <thead className={clsx("border-b", isSuperAdmin ? "bg-amber-500/10 border-amber-500/20" : "bg-slate-50 border-slate-100")}>
                             <tr>
                                 <th className="p-4 w-10">
                                     <input
                                         type="checkbox"
                                         checked={isAllSelected}
                                         onChange={handleSelectAll}
-                                        className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
+                                        className={clsx("rounded border-slate-300 text-brand-blue", isSuperAdmin && "accent-amber-500")}
                                     />
                                 </th>
-                                <th className="p-4 font-semibold text-slate-600">Reg No</th>
-                                <th className="p-4 font-semibold text-slate-600">Name</th>
-                                <th className="p-4 font-semibold text-slate-600">Phone</th>
-                                <th className="p-4 font-semibold text-slate-600">Department</th>
-                                <th className="p-4 font-semibold text-slate-600">Year</th>
-                                <th className="p-4 font-semibold text-slate-600">Balance</th>
-                                <th className="p-4 font-semibold text-slate-600">Actions</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Reg No</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Name</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Phone</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Department</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Year</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Balance</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -748,71 +894,79 @@ const ManageStudents = () => {
                                 <tr><td colSpan="7" className="p-8 text-center text-slate-500">No students found. Add one to get started.</td></tr>
                             ) : filteredStudents.length === 0 ? (
                                 <tr><td colSpan="7" className="p-8 text-center text-slate-500">No students match the selected filters.</td></tr>
-                            ) : (
-                                filteredStudents.map((student) => (
-                                    <tr key={student.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                        <td className="p-4">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedStudents.includes(student.id)}
-                                                onChange={() => handleSelectStudent(student.id)}
-                                                className="rounded border-slate-300 text-brand-blue focus:ring-brand-blue"
+                            ) : filteredStudents.map((student) => (
+                                <tr key={student.id} className={clsx(
+                                    "border-b transition-colors group",
+                                    isSuperAdmin ? "border-amber-500/10 hover:bg-amber-500/5" : "border-slate-50 hover:bg-slate-50/50"
+                                )}>
+                                    <td className="p-4">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedStudents.includes(student.id)}
+                                            onChange={() => handleSelectStudent(student.id)}
+                                            className={clsx("rounded border-slate-300 text-brand-blue", isSuperAdmin && "accent-amber-500")}
+                                        />
+                                    </td>
+                                    <td className={clsx("p-4 text-sm", isSuperAdmin ? "text-amber-500/80" : "text-slate-600")}>{student.regno}</td>
+                                    <td className="p-4">
+                                        <div className="flex items-center gap-3">
+                                            <img 
+                                                src={student.photoUrl || `https://unavatar.io/${student.email}?fallback=${encodeURIComponent(`https://ui-avatars.com/api/?name=${student.name}&background=3b82f6&color=fff`)}`}
+                                                alt={student.name}
+                                                className={clsx("w-10 h-10 rounded-full object-cover shadow-sm transition-transform duration-300 hover:scale-110", isSuperAdmin ? "ring-2 ring-amber-500/30" : "")}
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = `https://ui-avatars.com/api/?name=${student.name}&background=3b82f6&color=fff`;
+                                                }}
                                             />
-                                        </td>
-                                        <td className="p-4">{student.regno}</td>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-3">
-                                                <img 
-                                                    src={student.photoUrl || `https://unavatar.io/${student.email}?fallback=${encodeURIComponent(`https://ui-avatars.com/api/?name=${student.name}&background=3b82f6&color=fff`)}`}
-                                                    alt={student.name}
-                                                    className="w-10 h-10 rounded-full object-cover shadow-sm transition-transform duration-300 hover:scale-110"
-                                                    onError={(e) => {
-                                                        e.target.onerror = null;
-                                                        e.target.src = `https://ui-avatars.com/api/?name=${student.name}&background=3b82f6&color=fff`;
-                                                    }}
-                                                />
-                                                <span className="font-medium">{student.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-slate-500">{student.phone || "-"}</td>
-                                        <td className="p-4">{student.dept}</td>
-                                        <td className="p-4">{student.class}</td>
-                                        <td className={`p-4 font-medium ${student.fees?.balance > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                                            ₹{student.fees?.balance || 0}
-                                        </td>
-                                        <td className="p-4 flex gap-2">
-                                            <button
-                                                onClick={() => handleView(student)}
-                                                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                                title={`View ${student.name}`}
-                                            >
-                                                <Eye size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleSinglePrint(student.id)}
-                                                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                                title={`Print TC for ${student.name}`}
-                                            >
-                                                <Printer size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleEdit(student)}
-                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title={`Edit ${student.name}`}
-                                            >
-                                                <Pencil size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(student.id, student.name)}
-                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                title={`Delete ${student.name}`}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                                            <span className={clsx("font-bold", isSuperAdmin ? "text-amber-500 group-hover:text-amber-400" : "text-slate-900 group-hover:text-brand-blue")}>{student.name}</span>
+                                        </div>
+                                    </td>
+                                    <td className="p-4 text-slate-500">{student.phone || "-"}</td>
+                                    <td className="p-4">{student.dept}</td>
+                                    <td className="p-4">{student.class}</td>
+                                    <td className={`p-4 font-medium ${student.fees?.balance > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                        ₹{student.fees?.balance || 0}
+                                    </td>
+                                    <td className="p-4 flex gap-2">
+                                        <button
+                                            onClick={() => handleView(student)}
+                                            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                            title={`View ${student.name}`}
+                                        >
+                                            <Eye size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleSinglePrint(student.id)}
+                                            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                            title={`Print TC for ${student.name}`}
+                                        >
+                                            <Printer size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleEdit(student)}
+                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            title={`Edit ${student.name}`}
+                                        >
+                                            <Pencil size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(student.id, student.name)}
+                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            title={`Delete ${student.name}`}
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => resendEmail(student)}
+                                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                            title={`Resend Welcome Email to ${student.name}`}
+                                        >
+                                            <Mail size={18} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
@@ -820,11 +974,12 @@ const ManageStudents = () => {
 
             <AnimatePresence>
                 {isModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { setIsModalOpen(false); resetForm(); }}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col"
                         >
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
@@ -867,12 +1022,12 @@ const ManageStudents = () => {
 
                                         {/* QR Code display for Admin View mode */}
                                         {isViewOnly && editingStudent && (
-                                            <div className="flex-shrink-0 relative group flex flex-col items-center pl-4 border-l border-slate-100">
-                                                <div className="w-24 h-24 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
+                                            <div className="flex-shrink-0 relative group flex flex-col items-center pl-4 border-l border-slate-100 no-gold">
+                                                <div className="w-24 h-24 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center no-gold">
                                                     <img 
                                                         src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${window.location.origin}/id/${editingStudent.regno}`)}`}
                                                         alt="Student Pass QR" 
-                                                        className="w-full h-full object-contain"
+                                                        className="w-full h-full object-contain no-gold"
                                                     />
                                                 </div>
                                                 <p className="text-[10px] uppercase font-bold text-slate-400 mt-1.5 tracking-wide text-center">Library / Lab Pass</p>
@@ -1066,11 +1221,12 @@ const ManageStudents = () => {
             {/* Promote Modal */}
             <AnimatePresence>
                 {isPromoteModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsPromoteModalOpen(false)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
                         >
                             <h3 className="text-xl font-bold text-slate-800 mb-2">Promote Students</h3>
@@ -1106,11 +1262,12 @@ const ManageStudents = () => {
             {/* Fee Update Modal */}
             <AnimatePresence>
                 {isFeeModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsFeeModalOpen(false)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
                         >
                             <h3 className="text-xl font-bold text-slate-800 mb-2">Update Batch Fees</h3>

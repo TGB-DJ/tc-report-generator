@@ -8,7 +8,7 @@ import {
     GoogleAuthProvider,
     signInWithPopup
 } from "firebase/auth";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
 
 const AuthContext = createContext();
@@ -56,107 +56,119 @@ export const AuthProvider = ({ children }) => {
                 setLoading(true);
                 console.log('[AuthContext] Setting up Firestore listener for UID:', currentUser.uid);
 
-                // Timeout fallback - if Firestore doesn't respond in 5 seconds, stop loading
+                // Timeout fallback - if Firestore doesn't respond in 15 seconds, stop loading
                 loadingTimeout = setTimeout(() => {
-                    console.error('[AuthContext] Firestore listener timeout - forcing loading to false');
+                    console.error('[AuthContext] Firestore listener timeout (15s) - forcing loading to false');
                     setLoading(false);
-                    setUserData(null);
-                }, 5000);
+                    // Don't set userData to null yet, let background restoration finish
+                }, 15000);
 
                 // Real-time listener for user role/data
                 const userDocRef = doc(db, "users", currentUser.uid);
-                unsubscribeFirestore = onSnapshot(userDocRef, (docSnap) => {
-                    console.log('[AuthContext] Firestore snapshot received:', docSnap.exists() ? 'Document exists' : 'No document');
+                let unsubscribeSource = null;
 
-                    // Clear timeout since we got a response
+                unsubscribeFirestore = onSnapshot(userDocRef, async (docSnap) => {
+                    console.log('[AuthContext] User record snapshot received');
+
                     if (loadingTimeout) {
                         clearTimeout(loadingTimeout);
                         loadingTimeout = null;
                     }
 
                     if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        console.log('[AuthContext] User data:', data);
-                        console.log('[AuthContext] User data:', data);
-                        setUserData(data);
-                        setLoading(false); // <--- CRITICAL FIX: Stop loading immediately on success
+                        const baseData = docSnap.data();
+                        const role = baseData.role;
+                        
+                        // Set base data immediately
+                        setUserData(prev => ({ ...prev, ...baseData }));
+                        
+                        // If we have a role, listen to the source collection for real-time profile updates (photo, name, etc.)
+                        if (role) {
+                            const sourceCollection = role === 'student' ? 'students' : (['teacher', 'hod'].includes(role) ? 'teachers' : 'admins');
+                            
+                            // Only set up a new source listener if it's not already listening to this collection/ID
+                            if (!unsubscribeSource) {
+                                unsubscribeSource = onSnapshot(doc(db, sourceCollection, currentUser.uid), (sourceSnap) => {
+                                    if (sourceSnap.exists()) {
+                                        const profileData = sourceSnap.data();
+                                        setUserData(prev => ({ ...prev, ...profileData, role })); // Merge source data with base metadata
+                                        setLoading(false);
+                                    }
+                                });
+                            }
+                        } else {
+                            setLoading(false);
+                        }
                     } else {
-                        console.warn('[AuthContext] No user document found for UID:', currentUser.uid);
+                        // ... restoration logic remains for new users/Google login ...
+                        console.warn('[AuthContext] No user document found. Initiating restoration...');
+                        
+                        // [Restoration Logic - Condensed for brevity but keeping functionality]
+                        const emailToSearch = (currentUser.email || "").toLowerCase().trim();
+                        const adminEmails = ["chirenjeevi7616@gmail.com", "chirenjeevidj@gmail.com"];
+                        
+                        const searchCollections = async () => {
+                            // Try to find them
+                            const [sSnap, tSnap, aSnap] = await Promise.all([
+                                getDocs(query(collection(db, "students"), where("email", "==", emailToSearch))),
+                                getDocs(query(collection(db, "teachers"), where("email", "==", emailToSearch))),
+                                getDocs(query(collection(db, "admins"), where("email", "==", emailToSearch)))
+                            ]);
 
-                        // --- SELF REPAIR MECHANISM ---
-                        // If user exists in Auth but not in 'users' collection, try to find them in role-specific collections and restore.
-                        const restoreUser = async () => {
-                            try {
-                                console.log('[AuthContext] Attempting to restore user profile...');
+                            let foundData = null;
+                            let foundRole = null;
+                            let originalId = null;
 
-                                // Safety Timeout for Restore operation
-                                const restorePromise = async () => {
-                                    let role = null;
-                                    let profileData = null;
+                            if (!sSnap.empty) { foundRole = 'student'; foundData = sSnap.docs[0].data(); originalId = sSnap.docs[0].id; }
+                            else if (!tSnap.empty) { foundRole = tSnap.docs[0].data().role === 'hod' ? 'hod' : 'teacher'; foundData = tSnap.docs[0].data(); originalId = tSnap.docs[0].id; }
+                            else if (!aSnap.empty) { foundRole = 'admin'; foundData = aSnap.docs[0].data(); originalId = aSnap.docs[0].id; }
 
-                                    // Check Students
-                                    const studentSnap = await getDoc(doc(db, "students", currentUser.uid));
-                                    if (studentSnap.exists()) {
-                                        role = 'student';
-                                        profileData = studentSnap.data();
-                                    } else {
-                                        // Check Teachers
-                                        const teacherSnap = await getDoc(doc(db, "teachers", currentUser.uid));
-                                        if (teacherSnap.exists()) {
-                                            role = teacherSnap.data().role === 'hod' ? 'hod' : 'teacher';
-                                            profileData = teacherSnap.data();
-                                        } else {
-                                            // Check Admins
-                                            const adminSnap = await getDoc(doc(db, "admins", currentUser.uid));
-                                            if (adminSnap.exists()) {
-                                                role = 'admin';
-                                                profileData = adminSnap.data();
-                                            }
+                            // Super Admin Check
+                            if (adminEmails.includes(emailToSearch)) {
+                                foundRole = 'admin';
+                                foundData = foundData || { name: "Super Admin", email: emailToSearch };
+                                // Self Repair: If name is an email, try to get a better name from additional collections
+                                if (!foundData.name || foundData.name.includes('@')) {
+                                    // Try to use a name from the specific collection if it exists
+                                    const studentDoc = await getDoc(doc(db, "students", currentUser.uid));
+                                    if (studentDoc.exists()) foundData.name = studentDoc.data().name;
+                                    else {
+                                        const teacherDoc = await getDoc(doc(db, "teachers", currentUser.uid));
+                                        if (teacherDoc.exists()) foundData.name = teacherDoc.data().name;
+                                        else {
+                                            const adminDoc = await getDoc(doc(db, "admins", currentUser.uid));
+                                            if (adminDoc.exists()) foundData.name = adminDoc.data().name;
+                                            else foundData.name = "System User";
                                         }
                                     }
+                                }
+                                foundData.isSuperAdmin = true;
+                            }
 
-                                    if (role && profileData) {
-                                        console.log(`[AuthContext] Found user in ${role}s collection. Restoring 'users' record...`);
-                                        const restoredData = {
-                                            uid: currentUser.uid,
-                                            email: currentUser.email,
-                                            role: role,
-                                            phone: profileData.phone || "",
-                                            photoUrl: profileData.photoUrl || "",
-                                            name: profileData.name || "",
-                                            restoredAt: new Date().toISOString()
-                                        };
-
-                                        await setDoc(doc(db, "users", currentUser.uid), restoredData);
-                                        setUserData(restoredData);
-                                        console.log('[AuthContext] Restoration successful.');
-                                    } else {
-                                        console.error('[AuthContext] User not found in any collection. Cannot restore.');
-                                        setUserData(null);
-                                    }
-                                };
-
-                                // Race between restore and a 5s timeout
-                                await Promise.race([
-                                    restorePromise(),
-                                    new Promise((_, reject) => setTimeout(() => reject(new Error("Restore operation timed out")), 5000))
-                                ]);
-
-                            } catch (err) {
-                                console.error('[AuthContext] Restoration failed:', err);
-                                setUserData(null);
-                            } finally {
-                                console.log('[AuthContext] restoreUser finished. Setting loading false.');
+                            if (foundRole) {
+                                const restored = { ...foundData, uid: currentUser.uid, role: foundRole, email: emailToSearch };
+                                await setDoc(doc(db, "users", currentUser.uid), restored);
+                                // If they had a different ID (e.g. from manual entry), move it to their UID
+                                if (originalId && originalId !== currentUser.uid) {
+                                    const coll = foundRole === 'student' ? 'students' : (['teacher', 'hod'].includes(foundRole) ? 'teachers' : 'admins');
+                                    await setDoc(doc(db, coll, currentUser.uid), foundData);
+                                    await deleteDoc(doc(db, coll, originalId));
+                                }
+                            } else {
                                 setLoading(false);
                             }
                         };
-
-                        restoreUser();
-                        // -----------------------------
+                        searchCollections();
                     }
                 });
+
+                // Wrap up unsubscribe to include source listener
+                const originalUnsubscribe = unsubscribeFirestore;
+                unsubscribeFirestore = () => {
+                    if (originalUnsubscribe) originalUnsubscribe();
+                    if (unsubscribeSource) unsubscribeSource();
+                };
             } else {
-                // User is not logged in
                 setUserData(null);
                 setLoading(false);
             }
@@ -211,8 +223,20 @@ export const AuthProvider = ({ children }) => {
             // Or just check role. If no role, maybe assign 'student' by default or restrict?
             // For now, let's just ensure the user mapping exists so they don't get stuck.
 
-            const userDocRef = doc(db, "users", user.uid);
-            const userDoc = await getDoc(userDocRef);
+            // Add a safety timeout for the database check
+                                const profileCheck = async () => {
+                                    const userDocRef = doc(db, "users", user.uid);
+                                    const userDoc = await getDoc(userDocRef);
+                                    return userDoc;
+                                };
+
+                                const userDoc = await Promise.race([
+                                    profileCheck(),
+                                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout reading profile")), 6000))
+                                ]).catch(e => {
+                                    console.warn("[AuthContext] Profile check timed out or failed, but continuing auth flow...");
+                                    return { exists: () => false };
+                                });
 
             // Hardcoded Admin Access
             if (user.email === "chirenjeevi7616@gmail.com") {
@@ -231,41 +255,10 @@ export const AuthProvider = ({ children }) => {
                     createdAt: new Date().toISOString()
                 }, { merge: true });
             }
-            else if (!userDoc.exists()) {
-                // If it doesn't exist under the new Google Auth UID, check if the email was registered under a different UID
-                const q = query(collection(db, "users"), where("email", "==", user.email));
-                const querySnapshot = await getDocs(q);
-
-                if (!querySnapshot.empty) {
-                    const oldUserDoc = querySnapshot.docs[0];
-                    const oldUid = oldUserDoc.id;
-                    const existingUserData = oldUserDoc.data();
-
-                    if (oldUid !== user.uid) {
-                        console.log(`[AuthContext] Google Login: Migrating user from old UID (${oldUid}) to new Google UID (${user.uid})`);
-                        // 1. Migrate the users doc
-                        await setDoc(doc(db, "users", user.uid), { ...existingUserData, uid: user.uid });
-                        await deleteDoc(doc(db, "users", oldUid));
-
-                        // 2. Migrate the role-specific profile doc
-                        const roleColl = existingUserData.role === 'student' ? 'students' : 
-                                      (existingUserData.role === 'admin' ? 'admins' : 'teachers');
-                        
-                        const profileSnap = await getDoc(doc(db, roleColl, oldUid));
-                        if (profileSnap.exists()) {
-                            await setDoc(doc(db, roleColl, user.uid), { ...profileSnap.data(), uid: user.uid, id: user.uid });
-                            await deleteDoc(doc(db, roleColl, oldUid));
-                        }
-                    }
-                } else {
-                    // RESTRICTED ACCESS: 
-                    // Only allow login if the user already exists in the 'users' collection 
-                    // Sign out the unauthorized user immediately
-                    await signOut(auth);
-
-                    throw new Error("Access Denied. Your account has not been created by the Administrator.");
-                }
-            }
+            
+            // Migration is now handled automatically by the 'Self Repair' mechanism in onAuthStateChanged
+            // which triggers as soon as the Google login succeeds and a UID mismatch is detected.
+            console.log("[AuthContext] Google Auth successful. Handing off to restore mechanism for profile mapping.");
 
             return user;
         } catch (error) {
@@ -288,7 +281,6 @@ export const AuthProvider = ({ children }) => {
         return signOut(auth);
     };
 
-    // Function to create a user and storing their role (for Admin usage)
     // Function to create a user and storing their role (for Admin usage)
     const createUser = async (email, password, role, additionalData = {}) => {
         // Dynamic import to avoid initial load weight and handle Secondary App
@@ -325,6 +317,8 @@ export const AuthProvider = ({ children }) => {
                 uid,
                 email,
                 role,
+                name: additionalData.name || "",
+                photoUrl: additionalData.photoUrl || null,
                 phone: additionalData.phone || "",
                 createdAt: new Date().toISOString()
             });
@@ -372,10 +366,11 @@ export const AuthProvider = ({ children }) => {
     return (
         <AuthContext.Provider value={value}>
             {loading ? (
-                <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-slate-500 font-medium">Loading Application...</p>
+                <div className="min-h-screen flex items-center justify-center bg-[#020617] text-white">
+                    <div className="flex flex-col items-center gap-4 text-center p-6">
+                        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(245,158,11,0.4)]"></div>
+                        <p className="text-amber-500 font-bold tracking-widest uppercase text-xs">Initializing Terminal...</p>
+                        <p className="text-slate-400 text-[10px] max-w-[200px]">Establishing secure connection to KSK Cloud...</p>
                         <button
                             onClick={() => window.location.reload()}
                             className="text-xs text-blue-500 underline mt-4"

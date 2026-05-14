@@ -11,9 +11,9 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
 const StudentDashboard = () => {
-    const { user } = useAuth();
-    const [student, setStudent] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const { user, userData } = useAuth();
+    const [student, setStudent] = useState(userData && userData.role === 'student' ? userData : null);
+    const [loading, setLoading] = useState(!student);
     const [activeTab, setActiveTab] = useState('profile');
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
@@ -37,6 +37,14 @@ const StudentDashboard = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             if (!user) return;
+            
+            // If we already have full profile data from AuthContext migration, use it
+            if (userData && userData.role === 'student' && userData.regno) {
+                setStudent(userData);
+                setLoading(false);
+                return;
+            }
+
             try {
                 const docRef = doc(db, "students", user.uid);
                 const docSnap = await getDoc(docRef);
@@ -439,11 +447,11 @@ const StudentDashboard = () => {
                                 <X size={20} />
                             </button>
                             <h3 className="text-xl font-bold text-slate-800 mb-6">Scan QR Code</h3>
-                            <div className="w-64 h-64 bg-white p-2 rounded-xl border-2 border-slate-100 shadow-inner mb-6">
+                            <div className="w-64 h-64 bg-white p-2 rounded-xl border-2 border-slate-100 shadow-inner mb-6 no-gold">
                                 <img 
                                     src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${window.location.origin}/id/${student.regno}`)}`}
                                     alt="Student Pass QR (Large)" 
-                                    className="w-full h-full object-contain"
+                                    className="w-full h-full object-contain no-gold"
                                 />
                             </div>
                             <p className="text-sm text-slate-500 text-center px-4">
@@ -831,7 +839,7 @@ const StudentDashboard = () => {
                             <div className="flex justify-center w-full p-4 overflow-hidden">
                                 <div 
                                     ref={idCardRef}
-                                    className="w-[340px] bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden relative"
+                                    className="w-[340px] bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden relative no-gold"
                                 >
                                     {/* Top Header */}
                                     <div className="bg-brand-blue p-4 flex items-center justify-center gap-3 relative overflow-hidden">
@@ -857,11 +865,11 @@ const StudentDashboard = () => {
                                             </div>
                                             
                                             {/* QR Code */}
-                                            <div className="w-24 h-24 bg-white p-1.5 rounded-md border-2 border-white shadow-lg mt-2 flex items-center justify-center overflow-hidden">
+                                            <div className="w-24 h-24 bg-white p-1.5 rounded-md border-2 border-white shadow-lg mt-2 flex items-center justify-center overflow-hidden no-gold">
                                                 <img 
                                                     src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${window.location.origin}/id/${student.regno}`)}`}
                                                     alt="QR" 
-                                                    className="w-full h-full object-contain"
+                                                    className="w-full h-full object-contain no-gold"
                                                 />
                                             </div>
                                         </div>

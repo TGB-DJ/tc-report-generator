@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import clsx from 'clsx';
 import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
@@ -12,6 +13,8 @@ import Card from '../../components/ui/Card';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ManageTeachers = () => {
+    const { userData } = useAuth();
+    const isSuperAdmin = userData?.isSuperAdmin;
     const [teachers, setTeachers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -119,6 +122,7 @@ const ManageTeachers = () => {
 
                 // Update 'users' collection too
                 await setDoc(doc(db, "users", docId), {
+                    name: teacherData.name,
                     email: formData.email,
                     phone: formData.phone,
                     role: teacherData.role
@@ -192,12 +196,17 @@ const ManageTeachers = () => {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-slate-800">Manage Teachers</h2>
+                <h2 className={clsx("text-2xl font-bold", isSuperAdmin ? "" : "text-slate-800")}>Manage Teachers</h2>
                 <div className="flex gap-2 items-center">
                     <select
                         value={filterDept}
                         onChange={(e) => setFilterDept(e.target.value)}
-                        className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:border-brand-blue outline-none"
+                        className={clsx(
+                            "px-3 py-2 rounded-lg border text-sm outline-none transition-all",
+                            isSuperAdmin 
+                                ? "bg-black/40 border-amber-500/30 text-amber-500 focus:border-amber-500" 
+                                : "bg-white border-slate-200 text-slate-700 focus:ring-2 focus:border-brand-blue"
+                        )}
                     >
                         <option value="All">All Departments</option>
                         {TEACHER_DEPARTMENTS.map(dept => (
@@ -245,16 +254,16 @@ const ManageTeachers = () => {
                 </div>
             </div>
 
-            <Card className="overflow-hidden p-0">
+            <Card className={clsx("overflow-hidden p-0 border-none", isSuperAdmin ? "card-bg shadow-2xl" : "shadow-md")}>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-50 border-b border-slate-100">
+                        <thead className={clsx("border-b", isSuperAdmin ? "bg-amber-500/10 border-amber-500/20" : "bg-slate-50 border-slate-100")}>
                             <tr>
-                                <th className="p-4 font-semibold text-slate-600">Details</th>
-                                <th className="p-4 font-semibold text-slate-600">Department</th>
-                                <th className="p-4 font-semibold text-slate-600">Qualification</th>
-                                <th className="p-4 font-semibold text-slate-600">Join Date</th>
-                                <th className="p-4 font-semibold text-slate-600">Actions</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Details</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Department</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Qualification</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Join Date</th>
+                                <th className={clsx("p-4 font-semibold text-xs uppercase tracking-wider", isSuperAdmin ? "text-amber-500/70" : "text-slate-600")}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -264,27 +273,30 @@ const ManageTeachers = () => {
                                 <tr><td colSpan="5" className="p-8 text-center text-slate-500">No teachers found.</td></tr>
                             ) : (
                                 filteredTeachers.map((teacher) => (
-                                    <tr key={teacher.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                    <tr key={teacher.id} className={clsx(
+                                        "border-b transition-colors group",
+                                        isSuperAdmin ? "border-amber-500/10 hover:bg-amber-500/5" : "border-slate-50 hover:bg-slate-50/50"
+                                    )}>
                                         <td className="p-4 flex items-start gap-3">
                                             <img 
                                                 src={teacher.photoUrl || `https://unavatar.io/${teacher.email}?fallback=${encodeURIComponent(`https://ui-avatars.com/api/?name=${teacher.name}&background=3b82f6&color=fff`)}`}
                                                 alt={teacher.name}
-                                                className="w-10 h-10 rounded-full object-cover shadow-sm transition-transform duration-300 hover:scale-110 mt-1"
+                                                className={clsx("w-10 h-10 rounded-full object-cover shadow-sm transition-transform duration-300 hover:scale-110 mt-1", isSuperAdmin ? "ring-2 ring-amber-500/30" : "")}
                                                 onError={(e) => {
                                                     e.target.onerror = null;
                                                     e.target.src = `https://ui-avatars.com/api/?name=${teacher.name}&background=3b82f6&color=fff`;
                                                 }}
                                             />
                                             <div>
-                                                <div className="font-medium text-slate-900">{teacher.name}</div>
-                                                <div className="text-sm text-slate-500">{teacher.email}</div>
-                                                <div className="text-sm text-slate-500">{teacher.phone}</div>
-                                                <div className="text-xs text-slate-400">ID: {teacher.cid}</div>
+                                                <div className={clsx("font-bold", isSuperAdmin ? "text-amber-500 group-hover:text-amber-400" : "text-slate-900 group-hover:text-brand-blue")}>{teacher.name}</div>
+                                                <div className={clsx("text-sm", isSuperAdmin ? "text-amber-500/60" : "text-slate-500")}>{teacher.email}</div>
+                                                <div className={clsx("text-sm", isSuperAdmin ? "text-amber-500/60" : "text-slate-500")}>{teacher.phone}</div>
+                                                <div className={clsx("text-xs", isSuperAdmin ? "text-amber-500/40" : "text-slate-400")}>ID: {teacher.cid}</div>
                                             </div>
                                         </td>
-                                        <td className="p-4">{teacher.dept}</td>
-                                        <td className="p-4">{teacher.qualification}</td>
-                                        <td className="p-4">{teacher.doj}</td>
+                                        <td className={clsx("p-4 text-sm", isSuperAdmin ? "text-amber-500/80" : "text-slate-600")}>{teacher.dept}</td>
+                                        <td className={clsx("p-4 text-sm", isSuperAdmin ? "text-amber-500/80" : "text-slate-600")}>{teacher.qualification}</td>
+                                        <td className={clsx("p-4 text-sm", isSuperAdmin ? "text-amber-500/80" : "text-slate-600")}>{teacher.doj}</td>
                                         <td className="p-4 flex gap-2">
                                             <button
                                                 onClick={() => handleEdit(teacher)}
@@ -311,15 +323,19 @@ const ManageTeachers = () => {
             {/* Add Teacher Modal */}
             <AnimatePresence>
                 {isModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                            className={clsx(
+                                "rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col",
+                                isSuperAdmin ? "bg-black/90 border border-amber-500/30 backdrop-blur-xl" : "bg-white"
+                            )}
                         >
-                            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                                <h3 className="text-xl font-bold">{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</h3>
+                            <div className={clsx("p-6 border-b flex justify-between items-center", isSuperAdmin ? "border-amber-500/20" : "border-slate-100")}>
+                                <h3 className={clsx("text-xl font-bold", isSuperAdmin ? "text-amber-500" : "text-slate-900")}>{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</h3>
                                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">×</button>
                             </div>
 
@@ -332,7 +348,7 @@ const ManageTeachers = () => {
 
                                 {/* NEW: Profile Picture Input */}
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Profile Picture</label>
+                                    <label className={clsx("block text-sm font-medium mb-1", isSuperAdmin ? "text-amber-500/80" : "text-slate-700")}>Profile Picture</label>
                                     <div className="flex items-center gap-4">
                                         {editingTeacher?.photoUrl && (
                                             <img

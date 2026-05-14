@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import clsx from 'clsx';
 import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { Plus, Trash2, Pencil, ShieldAlert, Search, Eye, EyeOff, ShieldCheck, Lock } from 'lucide-react';
 import Button from '../../components/ui/Button';
@@ -14,6 +16,7 @@ const ManageAdmins = () => {
     const [editingAdmin, setEditingAdmin] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [visiblePasswords, setVisiblePasswords] = useState({}); // Map of ID -> true/false
+    const [photoFile, setPhotoFile] = useState(null);
     const { createUser, user, userData } = useAuth();
 
     // Form State
@@ -98,6 +101,12 @@ const ManageAdmins = () => {
         setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
+    const handleFileChange = (e) => {
+        if (e.target.files[0]) {
+            setPhotoFile(e.target.files[0]);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setFormLoading(true);
@@ -118,29 +127,40 @@ const ManageAdmins = () => {
                 adminData.password = formData.password;
             }
 
+            let docId;
             if (editingAdmin) {
                 // UPDATE Logic
-                await setDoc(doc(db, "admins", editingAdmin.id), {
+                docId = editingAdmin.id;
+                await setDoc(doc(db, "admins", docId), {
                     ...adminData,
                     email: formData.email
                 }, { merge: true });
 
                 const userUpdateData = {
+                    name: formData.name,
                     email: formData.email,
                     phone: formData.phone,
                     role: 'admin',
-                    // Sync password to users result if needed
                     ...(formData.password ? { password: formData.password } : {})
                 };
 
-                await setDoc(doc(db, "users", editingAdmin.id), userUpdateData, { merge: true });
-                alert("Admin updated successfully!");
+                await setDoc(doc(db, "users", docId), userUpdateData, { merge: true });
             } else {
                 // CREATE Logic
-                // Note: user requested ability to see passwords. We store it in 'admins' collection too.
-                await createUser(formData.email, formData.password, 'admin', adminData);
-                alert("Admin created successfully!");
+                docId = await createUser(formData.email, formData.password, 'admin', adminData);
             }
+
+            // Handle Photo Upload
+            if (photoFile && docId) {
+                const storageRef = ref(storage, `admins/${docId}/profile.jpg`);
+                await uploadBytes(storageRef, photoFile);
+                const photoUrl = await getDownloadURL(storageRef);
+
+                await setDoc(doc(db, "admins", docId), { photoUrl }, { merge: true });
+                await setDoc(doc(db, "users", docId), { photoUrl }, { merge: true });
+            }
+
+            alert("Admin saved successfully!");
 
             setIsModalOpen(false);
             setFormData({ name: '', email: '', phone: '', password: '' });
@@ -180,10 +200,13 @@ const ManageAdmins = () => {
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <h2 className={clsx(
+                        "text-3xl font-extrabold",
+                        isSuperAdmin ? "bg-gradient-to-r from-amber-200 via-yellow-500 to-amber-600 bg-clip-text text-transparent" : "bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+                    )}>
                         Super Admin Panel
                     </h2>
-                    <p className="text-slate-500 font-medium">Manage system administrators</p>
+                    <p className={isSuperAdmin ? "text-amber-500/80 font-medium" : "text-slate-500 font-medium"}>Manage system administrators</p>
                 </div>
 
                 <div className="flex gap-3 w-full md:w-auto">
@@ -194,29 +217,38 @@ const ManageAdmins = () => {
                             placeholder="Search admins..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                            className={clsx(
+                                "w-full pl-10 pr-4 py-2 backdrop-blur-sm border rounded-xl focus:ring-2 focus:outline-none transition-all",
+                                isSuperAdmin ? "bg-black/20 border-amber-500/20 text-white focus:ring-amber-500/20 focus:border-amber-500/40" : "bg-white/50 border-slate-200 focus:ring-blue-500/20"
+                            )}
                         />
                     </div>
                     <Button onClick={() => {
                         setEditingAdmin(null);
                         setFormData({ name: '', email: '', phone: '', password: '' });
                         setIsModalOpen(true);
-                    }} className="shadow-lg shadow-blue-500/30">
+                    }} className={isSuperAdmin ? "bg-brand-blue shadow-lg shadow-amber-500/20" : "shadow-lg shadow-blue-500/30"}>
                         <Plus size={20} /> Add Admin
                     </Button>
                 </div>
             </div>
 
             {/* Futuristic Glass Table */}
-            <div className="rounded-3xl overflow-hidden border border-white/40 shadow-2xl bg-white/40 backdrop-blur-xl ring-1 ring-black/5">
+            <div className={clsx(
+                "rounded-3xl overflow-hidden border shadow-2xl",
+                isSuperAdmin ? "card-bg border-amber-500/20" : "bg-white border-white/40 backdrop-blur-xl ring-1 ring-black/5"
+            )}>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-slate-50/80 border-b border-slate-200/50 backdrop-blur-sm">
-                                <th className="p-5 font-bold text-slate-600 uppercase tracking-wider text-xs">Admin Profile</th>
-                                <th className="p-5 font-bold text-slate-600 uppercase tracking-wider text-xs">Credentials</th>
-                                <th className="p-5 font-bold text-slate-600 uppercase tracking-wider text-xs">Status</th>
-                                <th className="p-5 font-bold text-slate-600 uppercase tracking-wider text-xs text-right">Actions</th>
+                            <tr className={clsx(
+                                "border-b backdrop-blur-sm",
+                                isSuperAdmin ? "bg-amber-500/10 border-amber-500/20" : "bg-slate-50/80 border-slate-200/50"
+                            )}>
+                                <th className={clsx("p-5 font-bold uppercase tracking-wider text-xs", isSuperAdmin ? "text-amber-500" : "text-slate-600")}>Admin Profile</th>
+                                <th className={clsx("p-5 font-bold uppercase tracking-wider text-xs", isSuperAdmin ? "text-amber-500" : "text-slate-600")}>Credentials</th>
+                                <th className={clsx("p-5 font-bold uppercase tracking-wider text-xs", isSuperAdmin ? "text-amber-500" : "text-slate-600")}>Status</th>
+                                <th className={clsx("p-5 font-bold uppercase tracking-wider text-xs text-right", isSuperAdmin ? "text-amber-500" : "text-slate-600")}>Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100/50">
@@ -231,24 +263,36 @@ const ManageAdmins = () => {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.05 }}
-                                        className="hover:bg-white/60 transition-colors group"
+                                        className={clsx(
+                                            "transition-colors group",
+                                            isSuperAdmin ? "hover:bg-amber-500/5" : "hover:bg-white/60"
+                                        )}
                                     >
                                         <td className="p-5">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/30">
+                                                <div className={clsx(
+                                                    "w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-lg",
+                                                    isSuperAdmin ? "bg-gradient-to-br from-amber-400 to-yellow-700 shadow-amber-500/20" : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/30"
+                                                )}>
                                                     {admin.name?.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
-                                                    <div className="font-bold text-slate-800">{admin.name}</div>
-                                                    <div className="text-xs text-slate-500">{admin.phone || 'No phone'}</div>
+                                                    <div className={clsx("font-bold transition-colors", isSuperAdmin ? "text-amber-500 group-hover:text-amber-400" : "text-slate-900 group-hover:text-brand-blue")}>{admin.name}</div>
+                                                    <div className={clsx("text-xs transition-colors", isSuperAdmin ? "text-amber-500/60" : "text-slate-500")}>{admin.phone || 'No phone'}</div>
+                                                    <div className={clsx("text-[10px] transition-colors mt-0.5", isSuperAdmin ? "text-amber-500/40" : "text-slate-400")}>CID: {admin.id?.slice(-6).toUpperCase()}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="p-5">
                                             <div className="space-y-1">
-                                                <div className="text-sm font-medium text-slate-700">{admin.email}</div>
+                                                <div className={clsx("text-sm font-medium transition-colors", isSuperAdmin ? "text-amber-500/80" : "text-slate-700")}>{admin.email}</div>
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`text-xs font-mono bg-slate-100 px-2 py-1 rounded border border-slate-200 ${visiblePasswords[admin.id] ? 'text-slate-800' : 'text-slate-400'}`}>
+                                                    <div className={clsx(
+                                                        "text-xs font-mono px-2 py-1 rounded border",
+                                                        isSuperAdmin 
+                                                            ? (visiblePasswords[admin.id] ? 'text-amber-200 bg-amber-500/10 border-amber-500/20' : 'text-amber-700 bg-black/20 border-amber-500/10')
+                                                            : (visiblePasswords[admin.id] ? 'text-slate-800 bg-slate-100 border-slate-200' : 'text-slate-400 bg-slate-50 border-slate-100')
+                                                    )}>
                                                         {visiblePasswords[admin.id]
                                                             ? (admin.password || "Hidden/Not Stored")
                                                             : "••••••••••••"}
@@ -265,11 +309,17 @@ const ManageAdmins = () => {
                                         </td>
                                         <td className="p-5">
                                             {admin.isSuperAdmin ? (
-                                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                                                <span className={clsx(
+                                                    "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border",
+                                                    isSuperAdmin ? "bg-amber-500/20 text-amber-200 border-amber-500/30" : "bg-amber-100 text-amber-700 border-amber-200"
+                                                )}>
                                                     <ShieldCheck size={12} /> Super Admin
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                                                <span className={clsx(
+                                                    "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border",
+                                                    isSuperAdmin ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-blue-100 text-blue-700 border-blue-200"
+                                                )}>
                                                     <ShieldCheck size={12} /> Admin
                                                 </span>
                                             )}
@@ -278,14 +328,22 @@ const ManageAdmins = () => {
                                             <div className="flex items-center justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => handleEdit(admin)}
-                                                    className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all hover:scale-105 active:scale-95"
+                                                    className={clsx(
+                                                        "p-2 rounded-lg transition-all hover:scale-105 active:scale-95",
+                                                        isSuperAdmin ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20" : "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                                                    )}
                                                     title="Edit"
                                                 >
                                                     <Pencil size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(admin.id)}
-                                                    className={`p-2 rounded-lg transition-all hover:scale-105 active:scale-95 ${admin.id === user?.uid ? 'text-slate-300 bg-slate-50 cursor-not-allowed' : 'text-red-500 bg-red-50 hover:bg-red-100'}`}
+                                                    className={clsx(
+                                                        "p-2 rounded-lg transition-all hover:scale-105 active:scale-95",
+                                                        admin.id === user?.uid 
+                                                            ? (isSuperAdmin ? 'text-amber-900 bg-amber-950/20' : 'text-slate-300 bg-slate-50')
+                                                            : (isSuperAdmin ? 'text-red-400 bg-red-500/10 hover:bg-red-500/20' : 'text-red-500 bg-red-50 hover:bg-red-100')
+                                                    )}
                                                     disabled={admin.id === user?.uid}
                                                     title="Delete"
                                                 >
@@ -309,10 +367,19 @@ const ManageAdmins = () => {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden ring-1 ring-white/20"
+                            className={clsx(
+                                "rounded-2xl shadow-2xl w-full max-w-lg flex flex-col overflow-hidden ring-1 ring-white/20",
+                                isSuperAdmin ? "card-bg border-amber-500/30" : "bg-white"
+                            )}
                         >
-                            <div className="p-6 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
-                                <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                            <div className={clsx(
+                                "p-6 border-b flex justify-between items-center",
+                                isSuperAdmin ? "bg-amber-500/10 border-amber-500/20" : "bg-gradient-to-r from-slate-50 to-white border-slate-100"
+                            )}>
+                                <h3 className={clsx(
+                                    "text-xl font-bold",
+                                    isSuperAdmin ? "text-amber-400" : "bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600"
+                                )}>
                                     {editingAdmin ? 'Edit Administrator' : 'New Administrator'}
                                 </h3>
                                 <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">×</button>
@@ -333,7 +400,7 @@ const ManageAdmins = () => {
                                         value={formData.name}
                                         onChange={handleInputChange}
                                         required
-                                        className="bg-slate-50 border-transparent focus:bg-white focus:border-indigo-200"
+                                        className={isSuperAdmin ? "bg-black/20 border-amber-500/20 text-white focus:border-amber-500/40" : "bg-slate-50 border-transparent focus:bg-white focus:border-indigo-200"}
                                     />
                                     <Input
                                         name="email"
@@ -342,7 +409,7 @@ const ManageAdmins = () => {
                                         value={formData.email}
                                         onChange={handleInputChange}
                                         required
-                                        className="bg-slate-50 border-transparent focus:bg-white focus:border-indigo-200"
+                                        className={isSuperAdmin ? "bg-black/20 border-amber-500/20 text-white focus:border-amber-500/40" : "bg-slate-50 border-transparent focus:bg-white focus:border-indigo-200"}
                                     />
                                     <Input
                                         name="phone"
@@ -350,7 +417,7 @@ const ManageAdmins = () => {
                                         value={formData.phone}
                                         onChange={handleInputChange}
                                         required
-                                        className="bg-slate-50 border-transparent focus:bg-white focus:border-indigo-200"
+                                        className={isSuperAdmin ? "bg-black/20 border-amber-500/20 text-white focus:border-amber-500/40" : "bg-slate-50 border-transparent focus:bg-white focus:border-indigo-200"}
                                     />
                                     <div className="relative">
                                         <Input
@@ -362,7 +429,7 @@ const ManageAdmins = () => {
                                             required={!editingAdmin}
                                             placeholder={editingAdmin ? "Leave blank to keep current" : "Required"}
                                             minLength={6}
-                                            className="bg-slate-50 border-transparent focus:bg-white focus:border-indigo-200"
+                                            className={isSuperAdmin ? "bg-black/20 border-amber-500/20 text-white focus:border-amber-500/40" : "bg-slate-50 border-transparent focus:bg-white focus:border-indigo-200"}
                                         />
                                         <Lock className="absolute right-3 top-[2.4rem] text-slate-400 opacity-50" size={16} />
                                     </div>

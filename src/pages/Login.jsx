@@ -60,7 +60,7 @@ const Login = () => {
             }
             else if (userData.role === 'student') navigate('/student');
         } else if (user && !authLoading && !userData) {
-            setError('Login successful but no account profile found. Please contact admin.');
+            setError(`No profile found for ${user.email}. Please ensure this email is registered in your student/staff profile, or contact the admin for registration.`);
         }
     }, [userData, user, authLoading, navigate]);
 
@@ -267,10 +267,13 @@ const Login = () => {
                                 onClick={async () => {
                                     try {
                                         setGoogleLoading(true);
+                                        const tId = setTimeout(() => setGoogleLoading(false), 8000);
                                         await loginWithGoogle();
+                                        clearTimeout(tId);
                                     } catch (err) {
                                         setError(err.message);
-                                        setGoogleLoading(false); // Only stop loading on error, if success it redirects
+                                    } finally {
+                                        setGoogleLoading(false);
                                     }
                                 }}
                                 disabled={googleLoading || loading}

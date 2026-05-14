@@ -54,11 +54,12 @@ const BulkTCPrintModal = ({ studentIds, onClose }) => {
     };
 
     return createPortal(
-        <div className="print-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="print-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
                 className="print-modal-content bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto flex flex-col"
             >
                 {/* Header - Hidden when printing */}

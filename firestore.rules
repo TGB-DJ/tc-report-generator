@@ -25,35 +25,91 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      // Users can read their own doc; admins/HODs can read all.
-      // Allow public read IF the document is a student (needed for public ID Card verification)
-      allow read: if (request.auth != null && (request.auth.uid == userId || isAdmin() || isHod()))
-                  || resource.data.role == 'student';
-      // Only the user themselves or admins can write
-      allow write: if request.auth != null &&
-        (request.auth.uid == userId || isAdmin());
+      // Allow read if:
+      // 1. Authenticated and it's their own UID
+      // 2. Admin/HOD
+      // 3. The email matches their verified auth email (needed for migration)
+      // 4. It's a student (public read for verification)
+      allow read: if (request.auth != null && (
+                    request.auth.uid == userId || 
+                    isAdmin() || 
+                    isHod() || 
+                    request.auth.token.email == resource.data.email
+                  )) || resource.data.role == 'student';
+                  
+      // Allow write/delete if:
+      // 1. Admin
+      // 2. It's their own UID
+      // 3. The document's email matches their verified auth email (enables migration)
+      allow write, delete: if request.auth != null && (
+        isAdmin() || 
+        request.auth.uid == userId || 
+        request.auth.token.email == resource.data.email ||
+        (request.resource != null && request.auth.token.email == request.resource.data.email)
+      );
     }
 
-    // Admins collection - only admins can read/write
+    // Admins collection
     match /admins/{adminId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isAdmin() || (
+        request.auth != null && (
+          request.auth.uid == adminId || 
+          request.auth.token.email == resource.data.email ||
+          (request.resource != null && request.auth.token.email == request.resource.data.email)
+        )
+      );
     }
 
     // Teachers collection
     match /teachers/{teacherId} {
       // Admins and HODs can read all; teachers can read their own
       allow read: if request.auth != null &&
-        (request.auth.uid == teacherId || isAdmin() || isHod());
-      // Only admins can create/update/delete
-      allow write: if isAdmin();
+        (request.auth.uid == teacherId || isAdmin() || isHod() || request.auth.token.email == resource.data.email);
+      // Only admins can write, OR the teacher themselves can move/update if email matches
+      allow write, delete: if isAdmin() || (
+        request.auth != null && (
+          request.auth.uid == teacherId || 
+          request.auth.token.email == resource.data.email ||
+          (request.resource != null && request.auth.token.email == request.resource.data.email)
+        )
+      );
+    }
+
+    // Helper: get teacher department
+    function getTeacherDept() {
+      return get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.dept;
     }
 
     // Students collection
     match /students/{studentId} {
-      // Allow public read for ID card verification
-      allow read: if true;
-      // Only admins can create/update/delete
-      allow write: if isAdmin();
+      // Allow public read for ID card verification (get by specific ID)
+      allow get: if true;
+      // Restrict listing (queries)
+      allow list: if isAdmin() || isHod() || (isTeacher() && (
+        // Check if student dept contains the teacher's core department name
+        resource.data.dept.upper().matches('.*' + getTeacherDept().upper().replace('\\(', '').replace('\\)', '') + '.*')
+      ));
+
+      // Only admins can write, OR the student themselves can move/update if email matches
+      allow write, delete: if isAdmin() || (
+        request.auth != null && (
+          request.auth.uid == studentId || 
+          request.auth.token.email == resource.data.email ||
+          (request.resource != null && request.auth.token.email == request.resource.data.email)
+        )
+      );
+    }
+
+    // Attendance collection
+    match /attendance/{recordId} {
+      // Allow read/write for Admins/HODs or Teachers in the same department
+      allow read: if isAdmin() || isHod() || (isTeacher() && (
+        resource.data.dept.upper().matches('.*' + getTeacherDept().upper().replace('\\(', '').replace('\\)', '') + '.*')
+      ));
+      allow create: if isAdmin() || isHod() || (isTeacher() && (
+        request.resource.data.dept.upper().matches('.*' + getTeacherDept().upper().replace('\\(', '').replace('\\)', '') + '.*')
+      ));
+      allow update, delete: if isAdmin() || isHod();
     }
 
     // Events collection

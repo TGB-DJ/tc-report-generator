@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { updateDoc } from 'firebase/firestore'; // Added updateDoc
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../lib/firebase';
@@ -12,6 +12,37 @@ import Select from '../../components/Select';
 import { Users, Filter, Pencil, X, Printer, Bell } from 'lucide-react'; // Added Pencil, X
 import { AnimatePresence, motion } from 'framer-motion'; // Added
 import BulkTCPrintModal from '../../components/BulkTCPrintModal';
+import ModernDatePicker from '../../components/ui/ModernDatePicker';
+
+const DonutChart = ({ boys, girls, title }) => {
+    const total = boys + girls;
+    const boysPercent = total > 0 ? (boys / total) * 100 : 0;
+    const girlsPercent = total > 0 ? (girls / total) * 100 : 0;
+    const circumference = 2 * Math.PI * 60;
+    const boysArc = (boysPercent / 100) * circumference;
+    const girlsArc = (girlsPercent / 100) * circumference;
+
+    return (
+        <Card>
+            <h3 className="text-lg font-bold mb-4 text-slate-800">{title}</h3>
+            <div className="flex items-center justify-center gap-8">
+                <div className="relative">
+                    <svg width="160" height="160" viewBox="0 0 160 160">
+                        <circle cx="80" cy="80" r="60" fill="none" stroke="#e2e8f0" strokeWidth="20" />
+                        <circle cx="80" cy="80" r="60" fill="none" stroke="#3b82f6" strokeWidth="20" strokeDasharray={`${boysArc} ${circumference}`} strokeDashoffset="0" transform="rotate(-90 80 80)" className="transition-all duration-700" />
+                        <circle cx="80" cy="80" r="60" fill="none" stroke="#ec4899" strokeWidth="20" strokeDasharray={`${girlsArc} ${circumference}`} strokeDashoffset={`${-boysArc}`} transform="rotate(-90 80 80)" className="transition-all duration-700" />
+                        <text x="80" y="75" textAnchor="middle" className="text-2xl font-bold fill-slate-800">{total}</text>
+                        <text x="80" y="95" textAnchor="middle" className="text-xs fill-slate-500">Total</text>
+                    </svg>
+                </div>
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-blue-500"></span><span className="text-sm text-slate-600">Boys</span><span className="font-bold text-slate-800 ml-auto">{boys}</span></div>
+                    <div className="flex items-center gap-2"><span className="w-4 h-4 rounded-full bg-pink-500"></span><span className="text-sm text-slate-600">Girls</span><span className="font-bold text-slate-800 ml-auto">{girls}</span></div>
+                </div>
+            </div>
+        </Card>
+    );
+};
 
 const TeacherDashboard = () => {
     const { user } = useAuth();
@@ -24,6 +55,8 @@ const TeacherDashboard = () => {
     const [selectedFilter, setSelectedFilter] = useState('');
     const [feeStatus, setFeeStatus] = useState('all'); // all, paid, unpaid
     const [searchQuery, setSearchQuery] = useState(''); // Added Search State
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [attendanceRecords, setAttendanceRecords] = useState([]);
 
     // Edit State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -64,9 +97,27 @@ const TeacherDashboard = () => {
                     // Set default filter to 'All'
                     setSelectedFilter('All');
 
-                    // Get all students
-                    const querySnapshot = await getDocs(collection(db, "students"));
-                    const studentsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Find all valid full department names for this teacher
+                    const coreSubject = teacherData.dept.split('(')[0].trim().toLowerCase();
+                    const { DEPARTMENTS } = await import('../../constants/departments');
+                    const validDepts = Object.keys(DEPARTMENTS).filter(d => 
+                        d.toLowerCase().includes(coreSubject)
+                    );
+
+                    let studentsList = [];
+                    // Always include the exact dept name from teacher profile as well
+                    const searchDepts = Array.from(new Set([...validDepts, teacherData.dept]));
+
+                    if (searchDepts.length > 0) {
+                        // Firestore 'in' query supports up to 30 values
+                        const q = query(
+                            collection(db, "students"), 
+                            where("dept", "in", searchDepts.slice(0, 30))
+                        );
+                        const querySnapshot = await getDocs(q);
+                        studentsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    }
+                    
                     setAllStudents(studentsList);
                 }
             } catch (error) {
@@ -78,6 +129,21 @@ const TeacherDashboard = () => {
 
         fetchData();
     }, [user]);
+
+    useEffect(() => {
+        const fetchAttendance = async () => {
+            if (!teacherProfile?.dept) return;
+            try {
+                const q = query(collection(db, "attendance"), where("date", "==", selectedDate));
+                const snap = await getDocs(q);
+                const records = snap.docs.map(doc => doc.data());
+                setAttendanceRecords(records);
+            } catch (err) {
+                console.error("Error fetching attendance:", err);
+            }
+        };
+        fetchAttendance();
+    }, [selectedDate, teacherProfile]);
 
     // Notification Logic
     const [notifications, setNotifications] = useState([]);
@@ -250,6 +316,44 @@ const TeacherDashboard = () => {
 
         setFilteredStudents(result);
     }, [selectedFilter, feeStatus, searchQuery, allStudents, teacherProfile]);
+
+    // Calculate Attendance Metrics for Teacher's Dept
+    const attendanceMetrics = useMemo(() => {
+        if (!teacherProfile?.dept) return { total: 0, present: 0, absent: 0, boys: 0, girls: 0 };
+        const coreSubject = teacherProfile.dept.split('(')[0].trim();
+        
+        let total = 0, present = 0, absent = 0;
+        let boys = 0, girls = 0;
+        
+        filteredStudents.forEach(s => {
+            total++;
+            if (s.gender?.toLowerCase() === 'male') boys++;
+            if (s.gender?.toLowerCase() === 'female') girls++;
+        });
+
+        attendanceRecords.forEach(record => {
+            if (record.dept && !record.dept.includes(coreSubject)) return;
+            // Also apply class filter if selected
+            if (selectedFilter && selectedFilter !== 'All' && record.class !== selectedFilter) return;
+
+            Object.entries(record.records || {}).forEach(([studentId, status]) => {
+                const student = filteredStudents.find(s => s.id === studentId);
+                if (!student) return;
+
+                if (status === 'Present') present++;
+                else if (status === 'Absent') absent++;
+            });
+        });
+
+        const notMarked = total - present - absent;
+        return {
+            total,
+            present,
+            absent: absent + notMarked,
+            boys,
+            girls
+        };
+    }, [filteredStudents, attendanceRecords, teacherProfile, selectedFilter]);
 
     // Generate filter options (Just Years)
     const getFilterOptions = () => {
@@ -466,13 +570,13 @@ const TeacherDashboard = () => {
             </div>
 
             {/* Filter Dropdown - Matches the image */}
-            <Card>
+            <Card className="relative z-20">
                 <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
                         <Filter size={20} className="text-brand-blue" />
                         <h3 className="font-semibold text-slate-700">Filter Students</h3>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Select
                             name="filter"
                             label="Select Class"
@@ -487,7 +591,12 @@ const TeacherDashboard = () => {
                             onChange={(e) => setFeeStatus(e.target.value)}
                             options={['all', 'paid', 'unpaid']}
                         />
-                        <div className="md:col-span-2">
+                        <ModernDatePicker
+                            label="Attendance Date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                        />
+                        <div className="md:col-span-3">
                             <Input
                                 label="Search Student"
                                 placeholder="Search by Name or Register Number..."
@@ -496,12 +605,49 @@ const TeacherDashboard = () => {
                             />
                         </div>
                     </div>
-                    <p className="text-sm text-slate-500 mt-3">
-                        Showing {filteredStudents.length} students
-                    </p>
                 </div>
             </Card>
 
+            {/* Attendance Metrics & Analytics */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                    <DonutChart boys={attendanceMetrics.boys} girls={attendanceMetrics.girls} title="Department Gender Split" />
+                </div>
+                <Card className="lg:col-span-2">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-slate-800">Today's Attendance</h3>
+                        <span className="text-sm font-medium bg-slate-100 text-slate-600 px-3 py-1 rounded-full">{selectedDate}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                            <p className="text-sm text-blue-600 font-medium">Total Students</p>
+                            <h4 className="text-2xl font-bold text-blue-800">{attendanceMetrics.total}</h4>
+                        </div>
+                        <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+                            <p className="text-sm text-green-600 font-medium">Present</p>
+                            <h4 className="text-2xl font-bold text-green-800">{attendanceMetrics.present}</h4>
+                        </div>
+                        <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                            <p className="text-sm text-red-600 font-medium">Absent</p>
+                            <h4 className="text-2xl font-bold text-red-800">{attendanceMetrics.absent}</h4>
+                        </div>
+                    </div>
+                    {attendanceMetrics.total > 0 && (
+                        <div>
+                            <div className="flex justify-between text-sm font-medium text-slate-600 mb-2">
+                                <span>Attendance Rate</span>
+                                <span>{Math.round((attendanceMetrics.present / attendanceMetrics.total) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-3">
+                                <div 
+                                    className={`h-full rounded-full ${((attendanceMetrics.present / attendanceMetrics.total) * 100) >= 75 ? 'bg-green-500' : 'bg-red-500'}`} 
+                                    style={{ width: `${(attendanceMetrics.present / attendanceMetrics.total) * 100}%` }} 
+                                />
+                            </div>
+                        </div>
+                    )}
+                </Card>
+            </div>
             {/* Success/Error Toasts */}
             {successMessage && (
                 <Toast
@@ -653,11 +799,12 @@ const TeacherDashboard = () => {
             {/* Edit Modal */}
             <AnimatePresence>
                 {isEditModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsEditModalOpen(false)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
                         >
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -721,11 +868,12 @@ const TeacherDashboard = () => {
             {/* View Details Modal */}
             <AnimatePresence>
                 {viewingStudent && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setViewingStudent(null)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
                         >
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -887,11 +1035,12 @@ const TeacherDashboard = () => {
             {/* Teacher Profile Modal */}
             <AnimatePresence>
                 {isProfileModalOpen && teacherProfile && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsProfileModalOpen(false)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={(e) => e.stopPropagation()}
                             className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden"
                         >
                             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
